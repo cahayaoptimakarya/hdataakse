@@ -49,6 +49,10 @@ Route::middleware(['auth', 'verified', 'menu.permission'])->prefix('admin')->as(
         // Menus CRUD
         Route::resource('menus', MenuController::class)->except(['show'])->names('menus');
 
+        // Categories (inheritance via parent)
+        Route::get('/categories/data', [\App\Http\Controllers\Admin\CategoryController::class, 'data'])->name('categories.data');
+        Route::resource('categories', \App\Http\Controllers\Admin\CategoryController::class)->except(['create','show','edit'])->names('categories');
+
         // Permissions management
         Route::get('/permissions', [PermissionController::class, 'index'])->name('permissions.index');
         Route::get('/permissions/{role}/edit', [PermissionController::class, 'edit'])->name('permissions.edit');
