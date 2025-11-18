@@ -29,12 +29,12 @@ class RoleSeeder extends Seeder
 
         // Seed basic menu structure
         $menuRows = [
-            ['name' => 'Dashboard', 'slug' => 'dashboard', 'route' => 'admin.dashboard', 'icon' => 'home', 'parent_slug' => null, 'sort_order' => 0],
-            ['name' => 'Master Data', 'slug' => 'master-data', 'route' => null, 'icon' => 'database', 'parent_slug' => null, 'sort_order' => 10],
-            ['name' => 'Users', 'slug' => 'users', 'route' => 'admin.masterdata.users.index', 'icon' => 'users', 'parent_slug' => 'master-data', 'sort_order' => 20],
-            ['name' => 'Roles', 'slug' => 'roles', 'route' => 'admin.masterdata.roles.index', 'icon' => 'shield', 'parent_slug' => 'master-data', 'sort_order' => 21],
-            ['name' => 'Menus', 'slug' => 'menus', 'route' => 'admin.masterdata.menus.index', 'icon' => 'menu', 'parent_slug' => 'master-data', 'sort_order' => 22],
-            ['name' => 'Permissions', 'slug' => 'permissions', 'route' => 'admin.masterdata.permissions.index', 'icon' => 'lock', 'parent_slug' => 'master-data', 'sort_order' => 23],
+            ['name' => 'Dashboard', 'slug' => 'dashboard', 'route' => 'admin.dashboard', 'icon' => 'fa-solid fa-gauge-high', 'parent_slug' => null, 'sort_order' => 0],
+            ['name' => 'Master Data', 'slug' => 'master-data', 'route' => null, 'icon' => 'fa-solid fa-database', 'parent_slug' => null, 'sort_order' => 10],
+            ['name' => 'Users', 'slug' => 'users', 'route' => 'admin.masterdata.users.index', 'icon' => 'fa-solid fa-users', 'parent_slug' => 'master-data', 'sort_order' => 20],
+            ['name' => 'Roles', 'slug' => 'roles', 'route' => 'admin.masterdata.roles.index', 'icon' => 'fa-solid fa-user-shield', 'parent_slug' => 'master-data', 'sort_order' => 21],
+            ['name' => 'Menus', 'slug' => 'menus', 'route' => 'admin.masterdata.menus.index', 'icon' => 'fa-solid fa-bars', 'parent_slug' => 'master-data', 'sort_order' => 22],
+            ['name' => 'Permissions', 'slug' => 'permissions', 'route' => 'admin.masterdata.permissions.index', 'icon' => 'fa-solid fa-lock', 'parent_slug' => 'master-data', 'sort_order' => 23],
         ];
 
         // Insert parents first
