@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Item;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ItemController extends Controller
 {
@@ -124,5 +125,67 @@ class ItemController extends Controller
         $item->delete();
 
         return response()->json(['message' => 'Item berhasil dihapus']);
+    }
+
+    public function import(Request $request)
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:csv,txt', 'max:2048'],
+        ]);
+
+        $file = $request->file('file');
+        $path = $file->getRealPath();
+        $handle = fopen($path, 'r');
+        if (!$handle) {
+            return response()->json(['message' => 'Tidak dapat membaca file'], 422);
+        }
+
+        $headers = fgetcsv($handle);
+        if (!$headers) {
+            return response()->json(['message' => 'File kosong'], 422);
+        }
+        $headers = array_map(fn($h) => strtolower(trim($h)), $headers);
+
+        $expected = ['name', 'category', 'description'];
+        if (array_diff($expected, $headers)) {
+            return response()->json(['message' => 'Header harus: name, category, description'], 422);
+        }
+
+        $idx = array_flip($headers);
+        $created = 0;
+        $updated = 0;
+        DB::beginTransaction();
+        try {
+            while (($row = fgetcsv($handle)) !== false) {
+                $name = trim($row[$idx['name']] ?? '');
+                $categoryName = trim($row[$idx['category']] ?? '');
+                $description = trim($row[$idx['description']] ?? '');
+                if ($name === '') {
+                    continue;
+                }
+                $catId = 0;
+                if ($categoryName !== '') {
+                    $cat = Category::firstOrCreate(['name' => $categoryName], ['parent_id' => 0]);
+                    $catId = $cat->id;
+                }
+                $item = Item::updateOrCreate(
+                    ['name' => $name],
+                    ['category_id' => $catId, 'description' => $description]
+                );
+                $item->wasRecentlyCreated ? $created++ : $updated++;
+            }
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'Gagal import: '.$e->getMessage()], 500);
+        } finally {
+            fclose($handle);
+        }
+
+        return response()->json([
+            'message' => 'Import selesai',
+            'created' => $created,
+            'updated' => $updated,
+        ]);
     }
 }

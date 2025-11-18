@@ -49,7 +49,7 @@
                         </div>
                     </div>
                 </div>
-                <button type="button" class="btn btn-light-primary me-3" id="btn_export_items">Export</button>
+                <button type="button" class="btn btn-light-primary me-3" id="btn_import_items">Import CSV</button>
                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modal_item_form" id="btn_open_create_item">
                     Add Item
                 </button>
@@ -136,6 +136,7 @@
     const storeUrl  = '{{ route('admin.masterdata.items.store') }}';
     const updateTpl = '{{ route('admin.masterdata.items.update', ':id') }}';
     const deleteTpl = '{{ route('admin.masterdata.items.destroy', ':id') }}';
+    const importUrl = '{{ route('admin.masterdata.items.import') }}';
 
     const ensureOption = (selectEl, id, name) => {
         if (!selectEl) return;
@@ -166,6 +167,10 @@
         const formId = document.getElementById('item_id');
         const formDescription = document.getElementById('item_description');
         const titleEl = document.getElementById('modal_item_title');
+        const importBtn = document.getElementById('btn_import_items');
+        const importInput = document.createElement('input');
+        importInput.type = 'file';
+        importInput.accept = '.csv,text/csv';
 
         const setCategoryValue = (val) => {
             if (!formCategory) return;
@@ -270,6 +275,46 @@
             setCategoryValue('0');
             clearErrors();
             if (titleEl) titleEl.textContent = 'Add Item';
+        });
+
+        importBtn?.addEventListener('click', ()=> importInput.click());
+        importInput.addEventListener('change', async ()=> {
+            const file = importInput.files[0];
+            if (!file) return;
+            const formData = new FormData();
+            formData.append('file', file);
+            try {
+                const res = await fetch(importUrl, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json',
+                    },
+                    body: formData,
+                });
+                const text = await res.text();
+                let json;
+                try { json = JSON.parse(text); } catch (e) {
+                    console.error('Invalid JSON', text);
+                    if (typeof Swal !== 'undefined') Swal.fire('Error', 'Respons server tidak valid', 'error');
+                    return;
+                }
+                if (!res.ok) {
+                    if (json?.errors) {
+                        const msg = Object.values(json.errors).flat().join(', ');
+                        Swal?.fire('Error', msg || 'Gagal import', 'error');
+                    } else {
+                        Swal?.fire('Error', json.message || 'Gagal import', 'error');
+                    }
+                    return;
+                }
+                Swal?.fire('Berhasil', `${json.message || 'Import selesai'} (created: ${json.created}, updated: ${json.updated})`, 'success');
+                importInput.value = '';
+                reloadTable();
+            } catch (err) {
+                console.error(err);
+                Swal?.fire('Error', 'Gagal import', 'error');
+            }
         });
 
         form?.addEventListener('submit', async (e) => {
