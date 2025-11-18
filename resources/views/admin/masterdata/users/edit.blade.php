@@ -18,7 +18,7 @@
     <div class="container-fluid" id="kt_content_container">
         <div class="card">
             <div class="card-body py-6">
-                <form method="POST" action="{{ route('admin.masterdata.users.update', $user->id) }}" class="form">
+                <form method="POST" action="{{ route('admin.masterdata.users.update', $user->id) }}" class="form" enctype="multipart/form-data">
                     @csrf
                     @method('PUT')
                     <div class="mb-10">
@@ -45,6 +45,16 @@
                         </select>
                         @error('roles')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
+                    <div class="mb-10">
+                        <label class="form-label">Avatar</label>
+                        <div class="d-flex align-items-center gap-4 mb-3">
+                            <img src="{{ $user->avatar_url }}" alt="Avatar" class="w-60px h-60px rounded-circle object-cover">
+                            <span class="text-muted fs-7">Avatar sekarang</span>
+                        </div>
+                        <input type="file" name="avatar" class="form-control @error('avatar') is-invalid @enderror form-control-solid" accept=".jpg,.jpeg,.png" />
+                        @error('avatar')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                        <div class="form-text">Boleh dikosongkan jika tidak ingin mengganti.</div>
+                    </div>
                     <div class="d-flex justify-content-end">
                         <a href="{{ route('admin.masterdata.users.index') }}" class="btn btn-light me-3">Batal</a>
                         <button type="submit" class="btn btn-primary">Simpan</button>
@@ -55,4 +65,3 @@
     </div>
 </div>
 @endsection
-

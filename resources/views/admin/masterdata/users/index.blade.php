@@ -62,6 +62,7 @@
                 <thead>
                     <tr class="text-start text-gray-400 fw-bolder fs-7 text-uppercase gs-0">
                         <th>ID</th>
+                        <th>Avatar</th>
                         <th>Nama</th>
                         <th>Email</th>
                         <th>Roles</th>
@@ -124,6 +125,7 @@
             },
             columns: [
                 { data: 'id' },
+                { data: 'avatar_url', orderable:false, searchable:false, render: (data)=>`<img src="${data}" alt="avatar" class="w-40px h-40px rounded-circle object-cover">` },
                 { data: 'name' },
                 { data: 'email' },
                 { data: 'roles' },

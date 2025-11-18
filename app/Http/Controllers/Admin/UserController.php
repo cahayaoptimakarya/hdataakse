@@ -7,6 +7,7 @@ use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class UserController extends Controller
@@ -37,6 +38,7 @@ class UserController extends Controller
                 'id' => $u->id,
                 'name' => $u->name,
                 'email' => $u->email,
+                'avatar_url' => $u->avatar_url,
                 'roles' => $u->roles->pluck('name')->implode(', '),
             ];
         });
@@ -58,11 +60,18 @@ class UserController extends Controller
             'password' => ['required','string','min:6','max:100'],
             'roles' => ['nullable','array'],
             'roles.*' => ['integer','exists:roles,id'],
+            'avatar' => ['nullable','image','mimes:jpg,jpeg,png','max:2048'],
         ]);
+        $avatarPath = null;
+        if ($request->file('avatar')) {
+            $stored = $request->file('avatar')->store('avatars', 'public');
+            $avatarPath = 'storage/'.$stored;
+        }
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
+            'avatar' => $avatarPath ?: User::defaultAvatar(),
             'email_verified_at' => now(),
         ]);
         if (!empty($validated['roles'])) {
@@ -86,6 +95,7 @@ class UserController extends Controller
             'password' => ['nullable','string','min:6','max:100'],
             'roles' => ['nullable','array'],
             'roles.*' => ['integer','exists:roles,id'],
+            'avatar' => ['nullable','image','mimes:jpg,jpeg,png','max:2048'],
         ]);
         $update = [
             'name' => $validated['name'],
@@ -94,6 +104,15 @@ class UserController extends Controller
         if (!empty($validated['password'])) {
             $update['password'] = Hash::make($validated['password']);
         }
+        if ($request->file('avatar')) {
+            $stored = $request->file('avatar')->store('avatars', 'public');
+            // Delete old avatar if it was user-uploaded
+            if ($user->avatar && str_starts_with($user->avatar, 'storage/avatars/')) {
+                $oldPath = str_replace('storage/', '', $user->avatar);
+                Storage::disk('public')->delete($oldPath);
+            }
+            $update['avatar'] = 'storage/'.$stored;
+        }
         $user->update($update);
         $user->roles()->sync($validated['roles'] ?? []);
         return redirect()->route('admin.masterdata.users.index')->with('success', 'User berhasil diperbarui');
@@ -101,6 +120,10 @@ class UserController extends Controller
 
     public function destroy(User $user)
     {
+        if ($user->avatar && str_starts_with($user->avatar, 'storage/avatars/')) {
+            $oldPath = str_replace('storage/', '', $user->avatar);
+            Storage::disk('public')->delete($oldPath);
+        }
         $user->delete();
         return redirect()->route('admin.masterdata.users.index')->with('success', 'User berhasil dihapus');
     }

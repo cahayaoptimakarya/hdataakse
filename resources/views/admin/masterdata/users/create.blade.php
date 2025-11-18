@@ -18,7 +18,7 @@
     <div class="container-fluid" id="kt_content_container">
         <div class="card">
             <div class="card-body py-6">
-                <form method="POST" action="{{ route('admin.masterdata.users.store') }}" class="form">
+                <form method="POST" action="{{ route('admin.masterdata.users.store') }}" class="form" enctype="multipart/form-data">
                     @csrf
                     <div class="mb-10">
                         <label class="form-label required">Nama</label>
@@ -44,6 +44,12 @@
                         </select>
                         @error('roles')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
+                    <div class="mb-10">
+                        <label class="form-label">Avatar</label>
+                        <input type="file" name="avatar" class="form-control @error('avatar') is-invalid @enderror form-control-solid" accept=".jpg,.jpeg,.png" />
+                        @error('avatar')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                        <div class="form-text">Kosongkan untuk menggunakan avatar default.</div>
+                    </div>
                     <div class="d-flex justify-content-end">
                         <a href="{{ route('admin.masterdata.users.index') }}" class="btn btn-light me-3">Batal</a>
                         <button type="submit" class="btn btn-primary">Simpan</button>
@@ -54,4 +60,3 @@
     </div>
 </div>
 @endsection
-
