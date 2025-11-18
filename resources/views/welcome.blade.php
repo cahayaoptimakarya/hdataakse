@@ -252,55 +252,55 @@
 
                     <div class="hero-body">
                         <div>
-                            <div class="hero-title">Kendalikan pengadaan & logistik global dalam satu kanvas interaktif.</div>
+                            <div class="hero-title">Kelola identitas, peran, dan izin dalam satu kanvas ringan.</div>
                             <p class="hero-subtext">
-                                Didesain untuk tim procurement modern: pantau PO, shipment, dan warehouse receipt tanpa menunggu laporan manual.
-                                Insight finansial & operasional muncul realtime, siap dipresentasikan kapan saja.
+                                Didesain untuk admin yang perlu mengatur pengguna, role, menu, serta izin dengan cepat.
+                                Semua perubahan tercatat, transparan, dan siap dipresentasikan kapan saja.
                             </p>
                             <div class="stats-grid">
                                 <div class="stat-card">
-                                    <div class="stat-label">Lead Time</div>
-                                    <div class="stat-value">-22%</div>
-                                    <small style="color:#94a3b8;">Rata-rata pengurangan door to door</small>
+                                    <div class="stat-label">User Active</div>
+                                    <div class="stat-value">1,240</div>
+                                    <small style="color:#94a3b8;">Tercatat dan tervalidasi</small>
                                 </div>
                                 <div class="stat-card">
-                                    <div class="stat-label">Shipments</div>
-                                    <div class="stat-value">480+</div>
-                                    <small style="color:#94a3b8;">Dipantau otomatis / tahun</small>
+                                    <div class="stat-label">Role Coverage</div>
+                                    <div class="stat-value">28</div>
+                                    <small style="color:#94a3b8;">Mencakup seluruh tim</small>
                                 </div>
                                 <div class="stat-card">
-                                    <div class="stat-label">Alerts</div>
+                                    <div class="stat-label">Audit Checks</div>
                                     <div class="stat-value">24/7</div>
-                                    <small style="color:#94a3b8;">Notifikasi milestone penting</small>
+                                    <small style="color:#94a3b8;">History izin & akses</small>
                                 </div>
                             </div>
                         </div>
                         <div class="panel">
                             <h3>KPI Snapshot — Nov 2025</h3>
                             <p style="font-size:14px; margin-bottom:18px;">
-                                Semua metrik procurement kami distream secara otomatis dengan highlight untuk potensi bottleneck.
+                                Semua metrik akses distream otomatis dengan highlight untuk potensi risiko.
                             </p>
                             <div style="display:flex; flex-direction:column; gap:16px;">
                                 <div style="display:flex; justify-content:space-between; align-items:center;">
                                     <div>
-                                        <p style="margin:0; font-size:12px; color:#94a3b8;">PO Fulfillment</p>
-                                        <strong style="font-size:26px;">87%</strong>
+                                        <p style="margin:0; font-size:12px; color:#94a3b8;">Autorisasi Tepat</p>
+                                        <strong style="font-size:26px;">99%</strong>
                                     </div>
-                                    <span style="background:rgba(34,197,94,.15); color:#86efac; padding:6px 12px; border-radius:999px; font-size:12px;">+6.4%</span>
+                                    <span style="background:rgba(34,197,94,.15); color:#86efac; padding:6px 12px; border-radius:999px; font-size:12px;">Stabil</span>
                                 </div>
                                 <div style="display:flex; justify-content:space-between; align-items:center;">
                                     <div>
-                                        <p style="margin:0; font-size:12px; color:#94a3b8;">Shipments On-Time</p>
-                                        <strong style="font-size:26px;">92%</strong>
+                                        <p style="margin:0; font-size:12px; color:#94a3b8;">Permintaan Perubahan</p>
+                                        <strong style="font-size:26px;">14/minggu</strong>
                                     </div>
-                                    <span style="background:rgba(56,189,248,.15); color:#bae6fd; padding:6px 12px; border-radius:999px; font-size:12px;">+3.1%</span>
+                                    <span style="background:rgba(56,189,248,.15); color:#bae6fd; padding:6px 12px; border-radius:999px; font-size:12px;">Service-level tercapai</span>
                                 </div>
                                 <div style="display:flex; justify-content:space-between; align-items:center;">
                                     <div>
-                                        <p style="margin:0; font-size:12px; color:#94a3b8;">Warehouse Turnover</p>
-                                        <strong style="font-size:26px;">18 hari</strong>
+                                        <p style="margin:0; font-size:12px; color:#94a3b8;">Penyelarasan Menu</p>
+                                        <strong style="font-size:26px;">100%</strong>
                                     </div>
-                                    <span style="background:rgba(253,186,116,.2); color:#fed7aa; padding:6px 12px; border-radius:999px; font-size:12px;">Stabil</span>
+                                    <span style="background:rgba(253,186,116,.2); color:#fed7aa; padding:6px 12px; border-radius:999px; font-size:12px;">Roles & izin sinkron</span>
                                 </div>
                             </div>
                         </div>
@@ -309,21 +309,21 @@
 
                 <div class="feature-grid">
                     <div class="feature-card">
-                        <h4>Centralized Procurement</h4>
-                        <p>Catat seluruh purchase order, perbarui fulfillment metrics secara otomatis, dan ekspor laporan hanya dengan satu klik.</p>
+                        <h4>Centralized Access</h4>
+                        <p>Kelola user, role, dan izin dari satu tempat dengan audit trail bawaan.</p>
                     </div>
                     <div class="feature-card">
-                        <h4>Shipment Visibility</h4>
-                        <p>Pantau jadwal ETD/ETA, status customs, hingga delivered ke gudang tanpa mengecek spreadsheet.</p>
+                        <h4>Menu Visibility</h4>
+                        <p>Pastikan setiap menu tampil sesuai izin yang diberikan tanpa konfigurasi berulang.</p>
                     </div>
                     <div class="feature-card">
-                        <h4>Warehouse Control</h4>
-                        <p>Posting warehouse receipt, lakukan alokasi FIFO, dan lihat statistik penerimaan real-time.</p>
+                        <h4>Compliance Control</h4>
+                        <p>Percepat review akses dengan laporan ringkas dan kebijakan konsisten.</p>
                     </div>
                 </div>
 
                 <footer>
-                    <p>© {{ date('Y') }} {{ config('app.name', 'Aplikasi') }} — Supply Chain Intelligence Platform.</p>
+                    <p>© {{ date('Y') }} {{ config('app.name', 'Aplikasi') }} — Access Control Platform.</p>
                     <div style="display:flex; gap:10px; align-items:center;">
                         <a href="{{ route('login') }}">Login</a>
                         <span>•</span>

@@ -11,13 +11,6 @@ class Permission
     public static function resolveBaseRoute(string $routeName): string
     {
         $base = preg_replace('/\.(create|store|edit|update|destroy|show|data|import)$/', '.index', $routeName);
-        // Map child resources to their parent menu permission
-        if (str_starts_with($base, 'admin.masterdata.categories.')) {
-            return 'admin.masterdata.items.index';
-        }
-        if (str_starts_with($base, 'admin.masterdata.supplier-categories.')) {
-            return 'admin.masterdata.suppliers.index';
-        }
         return $base;
     }
 

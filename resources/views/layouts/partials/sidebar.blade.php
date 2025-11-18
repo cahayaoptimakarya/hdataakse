@@ -1,7 +1,7 @@
 <div id="kt_aside" class="aside aside-dark aside-hoverable" data-kt-drawer="true" data-kt-drawer-name="aside" data-kt-drawer-activate="{default: true, lg: false}" data-kt-drawer-overlay="true" data-kt-drawer-width="{default:'200px', '300px': '250px'}" data-kt-drawer-direction="start" data-kt-drawer-toggle="#kt_aside_mobile_toggle">
     <div class="aside-logo flex-column-auto" id="kt_aside_logo">
-        <a href="{{ route('admin.masterdata.items.index') }}" class="text-decoration-none">
-            <span class="text-white fw-bold fs-4">Import Analytics</span>
+        <a href="{{ route('admin.masterdata.users.index') }}" class="text-decoration-none">
+            <span class="text-white fw-bold fs-4">Access Console</span>
         </a>
         <div id="kt_aside_toggle" class="btn btn-icon w-auto px-0 btn-active-color-primary aside-toggle" data-kt-toggle="true" data-kt-toggle-state="active" data-kt-toggle-target="body" data-kt-toggle-name="aside-minimize">
             <span class="svg-icon svg-icon-1 rotate-180">
@@ -34,6 +34,7 @@
                         $children = $children->filter(fn($c)=> $allowed->contains($c->id));
                         $showTop = $allowed->contains($top->id) || $children->isNotEmpty();
                         if (!$showTop) continue;
+                        $hasChildren = $children->isNotEmpty();
                         $isActive = $top->route
                             ? (
                                 request()->routeIs($top->route)
@@ -51,8 +52,23 @@
                                 );
                               });
                     ?>
+                    @if(!$hasChildren && $allowed->contains($top->id))
+                    <div class="menu-item">
+                        <a class="menu-link {{ $isActive ? 'active' : '' }}" href="{{ $top->route ? route($top->route) : '#' }}">
+                            <span class="menu-icon">
+                                <span class="svg-icon svg-icon-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                        <path opacity="0.3" d="M8.60002 17.9C7.50002 17.9 6.40002 18.3 5.60002 19.1L4.70002 20H19.3L18.4 19.1C17.6 18.3 16.5 17.9 15.4 17.9H8.60002Z" fill="black"/>
+                                        <path d="M12 15C14.7614 15 17 12.7614 17 10C17 7.23858 14.7614 5 12 5C9.23858 5 7 7.23858 7 10C7 12.7614 9.23858 15 12 15Z" fill="black"/>
+                                    </svg>
+                                </span>
+                            </span>
+                            <span class="menu-title">{{ $top->name }}</span>
+                        </a>
+                    </div>
+                    @else
                     <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ $isActive ? 'here show' : '' }}">
-                        <span class="menu-link">
+                        <a class="menu-link" href="{{ $top->route ? route($top->route) : '#' }}">
                             <span class="menu-icon">
                                 <span class="svg-icon svg-icon-2">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -63,7 +79,7 @@
                             </span>
                             <span class="menu-title">{{ $top->name }}</span>
                             <span class="menu-arrow"></span>
-                        </span>
+                        </a>
                         <div class="menu-sub menu-sub-accordion menu-active-bg">
                             @if($top->route && $allowed->contains($top->id))
                                 <div class="menu-item">
@@ -91,6 +107,7 @@
                             @endforeach
                         </div>
                     </div>
+                    @endif
                 @endforeach
             </div>
         </div>

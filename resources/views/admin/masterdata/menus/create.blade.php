@@ -32,7 +32,7 @@
                     </div>
                     <div class="mb-10">
                         <label class="form-label">Route</label>
-                        <input type="text" name="route" value="{{ old('route') }}" class="form-control @error('route') is-invalid @enderror form-control-solid" placeholder="cth: admin.masterdata.uom.index" />
+                        <input type="text" name="route" value="{{ old('route') }}" class="form-control @error('route') is-invalid @enderror form-control-solid" placeholder="cth: admin.masterdata.users.index" />
                         @error('route')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
                     <div class="mb-10">
@@ -69,4 +69,3 @@
     </div>
 </div>
 @endsection
-

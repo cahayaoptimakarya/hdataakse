@@ -1,17 +1,11 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\Admin\ItemController;
-use App\Http\Controllers\Admin\CategoryController;
-use App\Http\Controllers\Admin\UomController;
+use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\MenuController;
 use App\Http\Controllers\Admin\PermissionController;
-use App\Http\Controllers\Admin\SupplierController;
-use App\Http\Controllers\Admin\SupplierCategoryController;
-use App\Http\Controllers\Admin\WarehouseController;
-use App\Http\Controllers\Admin\ProcurementReportController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -23,9 +17,9 @@ Route::get('/healthz', function () {
     return response('OK', 200);
 });
 
-Route::get('/dashboard', function () {
-    return redirect()->route('admin.masterdata.items.index');
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('/dashboard', [DashboardController::class, 'index'])
+    ->middleware(['auth', 'verified'])
+    ->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -37,41 +31,9 @@ require __DIR__.'/auth.php';
 
 // Admin area
 Route::middleware(['auth', 'verified', 'menu.permission'])->prefix('admin')->as('admin.')->group(function () {
-    Route::get('/', function () {
-        return redirect()->route('admin.masterdata.items.index');
-    })->name('dashboard');
+    Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::prefix('masterdata')->as('masterdata.')->group(function () {
-        // Items DataTables AJAX endpoint
-        Route::get('/items/data', [ItemController::class, 'data'])->name('items.data');
-        // Items Import CSV
-        Route::post('/items/import', [ItemController::class, 'import'])->name('items.import');
-        // Items CRUD
-        Route::resource('items', ItemController::class)->except(['show'])->names('items');
-
-        // Categories DataTables AJAX endpoint
-        Route::get('/categories/data', [CategoryController::class, 'data'])->name('categories.data');
-        // Categories CRUD
-        Route::resource('categories', CategoryController::class)->except(['show'])->names('categories');
-
-        // Supplier Categories DataTables AJAX endpoint
-        Route::get('/supplier-categories/data', [SupplierCategoryController::class, 'data'])->name('supplier-categories.data');
-        // Supplier Categories CRUD
-        Route::resource('supplier-categories', SupplierCategoryController::class)->except(['show'])->names('supplier-categories');
-
-        // Suppliers DataTables AJAX endpoint
-        Route::get('/suppliers/data', [SupplierController::class, 'data'])->name('suppliers.data');
-        // Suppliers CRUD
-        Route::resource('suppliers', SupplierController::class)->except(['show'])->names('suppliers');
-
-        // Warehouses DataTables AJAX endpoint
-        Route::get('/warehouses/data', [WarehouseController::class, 'data'])->name('warehouses.data');
-        // Warehouses CRUD
-        Route::resource('warehouses', WarehouseController::class)->except(['show'])->names('warehouses');
-        // UOM DataTables AJAX endpoint
-        Route::get('/uom/data', [UomController::class, 'data'])->name('uom.data');
-        // UOM CRUD
-        Route::resource('uom', UomController::class)->except(['show'])->names('uom');
         // Users DataTables
         Route::get('/users/data', [AdminUserController::class, 'data'])->name('users.data');
         // Users CRUD
@@ -91,32 +53,5 @@ Route::middleware(['auth', 'verified', 'menu.permission'])->prefix('admin')->as(
         Route::get('/permissions', [PermissionController::class, 'index'])->name('permissions.index');
         Route::get('/permissions/{role}/edit', [PermissionController::class, 'edit'])->name('permissions.edit');
         Route::put('/permissions/{role}', [PermissionController::class, 'update'])->name('permissions.update');
-    });
-
-    // Procurement & Logistics
-    Route::prefix('procurement')->as('procurement.')->group(function () {
-        // Purchase Orders
-        Route::get('/purchase-orders/data', [\App\Http\Controllers\Admin\PurchaseOrderController::class, 'data'])->name('purchase-orders.data');
-        Route::get('/purchase-orders/fulfillment-report', [\App\Http\Controllers\Admin\PurchaseOrderController::class, 'report'])->name('purchase-orders.report');
-        Route::get('/purchase-orders/fulfillment-report/data', [\App\Http\Controllers\Admin\PurchaseOrderController::class, 'reportData'])->name('purchase-orders.report-data');
-        Route::get('/purchase-orders/fulfillment-report/item/{item}', [\App\Http\Controllers\Admin\PurchaseOrderController::class, 'reportItemDetail'])->name('purchase-orders.report-item-detail');
-        Route::resource('purchase-orders', \App\Http\Controllers\Admin\PurchaseOrderController::class)->names('purchase-orders');
-
-        // Procurement reports
-        Route::get('/reports/item-logistics', [ProcurementReportController::class, 'itemLogistics'])->name('reports.item-logistics');
-        Route::get('/reports/item-logistics/data', [ProcurementReportController::class, 'itemLogisticsData'])->name('reports.item-logistics-data');
-        Route::get('/reports/shipments', [ProcurementReportController::class, 'shipmentsOverview'])->name('reports.shipments');
-        Route::get('/reports/shipments/data', [ProcurementReportController::class, 'shipmentsOverviewData'])->name('reports.shipments-data');
-        Route::get('/reports/warehouse-receipts', [ProcurementReportController::class, 'receiptsOverview'])->name('reports.receipts');
-        Route::get('/reports/warehouse-receipts/data', [ProcurementReportController::class, 'receiptsOverviewData'])->name('reports.receipts-data');
-
-        // Shipments
-        Route::get('/shipments/data', [\App\Http\Controllers\Admin\ShipmentController::class, 'data'])->name('shipments.data');
-        Route::resource('shipments', \App\Http\Controllers\Admin\ShipmentController::class)->except(['show'])->names('shipments');
-
-        // Warehouse Receipts (GRN)
-        Route::get('/receipts/data', [\App\Http\Controllers\Admin\WarehouseReceiptController::class, 'data'])->name('receipts.data');
-        Route::get('/receipts/shipments/{shipment}/items', [\App\Http\Controllers\Admin\WarehouseReceiptController::class, 'shipmentItems'])->name('receipts.shipment-items');
-        Route::resource('receipts', \App\Http\Controllers\Admin\WarehouseReceiptController::class)->except(['show'])->names('receipts');
     });
 });
