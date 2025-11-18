@@ -20,9 +20,9 @@ var __webpack_exports__ = {};
 // This entry need to be wrapped in an IIFE because it need to be isolated against other entry modules.
 (() => {
 var __webpack_exports__ = {};
-/*!********************************************************************!*\
-  !*** ../../../themes/metronic/html/demo1/src/sass/style.dark.scss ***!
-  \********************************************************************/
+/*!*********************************************************************!*\
+  !*** ../../../themes/metronic/html/demo11/src/sass/style.dark.scss ***!
+  \*********************************************************************/
 __webpack_require__.r(__webpack_exports__);
 // extracted by mini-css-extract-plugin
 
@@ -30,9 +30,9 @@ __webpack_require__.r(__webpack_exports__);
 
 // This entry need to be wrapped in an IIFE because it need to be isolated against other entry modules.
 (() => {
-/*!**********************************************************************!*\
-  !*** ../../../themes/metronic/html/demo1/src/sass/plugins.dark.scss ***!
-  \**********************************************************************/
+/*!***********************************************************************!*\
+  !*** ../../../themes/metronic/html/demo11/src/sass/plugins.dark.scss ***!
+  \***********************************************************************/
 __webpack_require__.r(__webpack_exports__);
 // extracted by mini-css-extract-plugin
 
