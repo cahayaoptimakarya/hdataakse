@@ -21,8 +21,8 @@
                 <!--end::Svg Icon-->
             </div>
             <!--end::Heaeder menu toggle-->
-            <a href="../../demo11/dist/index.html">
-                <img alt="Logo" src="/metronic/assets/media/logos/logo-demo11.svg" class="h-20px h-lg-30px" />
+            <a href="/admin">
+                <img alt="Logo" src="/metronic/media/logos/logo-demo11.svg" class="h-20px h-lg-30px" />
             </a>
         </div>
         <!--end::Header Logo-->
@@ -31,12 +31,9 @@
             <!--begin::Topbar-->
             <div class="d-flex align-items-center flex-shrink-0">
                 <!--begin::Search-->
-                <div id="kt_header_search" class="d-flex align-items-center w-lg-225px" data-kt-search-keypress="true"
-                    data-kt-search-min-length="2" data-kt-search-enter="enter" data-kt-search-layout="menu"
-                    data-kt-search-responsive="lg" data-kt-menu-trigger="auto" data-kt-menu-permanent="true"
-                    data-kt-menu-placement="bottom-end">
+                <div id="kt_header_search_stub" class="d-flex align-items-center w-lg-225px">
                     <!--begin::Tablet and mobile search toggle-->
-                    <div data-kt-search-element="toggle" class="d-flex d-lg-none align-items-center">
+                    <div class="d-flex d-lg-none align-items-center">
                         <div
                             class="btn btn-icon btn-color-gray-700 btn-active-color-primary btn-outline btn-outline-secondary w-30px h-30px">
                             <!--begin::Svg Icon | path: icons/duotune/general/gen004.svg-->
@@ -56,7 +53,7 @@
                     </div>
                     <!--end::Tablet and mobile search toggle-->
                     <!--begin::Form-->
-                    <form data-kt-search-element="form" class="d-none d-lg-block w-100 mb-5 mb-lg-0 position-relative"
+                    <form class="d-none d-lg-block w-100 mb-5 mb-lg-0 position-relative"
                         autocomplete="off">
                         <!--begin::Hidden input(Added to disable form autocomplete)-->
                         <input type="hidden" />
@@ -79,18 +76,16 @@
                         <!--end::Icon-->
                         <!--begin::Input-->
                         <input type="text" class="form-control bg-transparent ps-13 fs-7 h-40px" name="search"
-                            value="" placeholder="Quick Search" data-kt-search-element="input" />
+                            value="" placeholder="Quick Search" />
                         <!--end::Input-->
                         <!--begin::Spinner-->
-                        <span class="position-absolute top-50 end-0 translate-middle-y lh-0 d-none me-5"
-                            data-kt-search-element="spinner">
+                        <span class="position-absolute top-50 end-0 translate-middle-y lh-0 d-none me-5">
                             <span class="spinner-border h-15px w-15px align-middle text-gray-400"></span>
                         </span>
                         <!--end::Spinner-->
                         <!--begin::Reset-->
                         <span
-                            class="btn btn-flush btn-active-color-primary position-absolute top-50 end-0 translate-middle-y lh-0 d-none me-4"
-                            data-kt-search-element="clear">
+                            class="btn btn-flush btn-active-color-primary position-absolute top-50 end-0 translate-middle-y lh-0 d-none me-4">
                             <!--begin::Svg Icon | path: icons/duotune/arrows/arr061.svg-->
                             <span class="svg-icon svg-icon-2 svg-icon-lg-1 me-0">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
@@ -159,7 +154,7 @@
                             <div class="menu-content d-flex align-items-center px-3">
                                 <!--begin::Avatar-->
                                 <div class="symbol symbol-50px me-5">
-                                    <img alt="Logo" src="assets/media/avatars/150-26.jpg" />
+                                    <img alt="Logo" src="/metronic/media/avatars/150-26.jpg" />
                                 </div>
                                 <!--end::Avatar-->
                                 <!--begin::Username-->

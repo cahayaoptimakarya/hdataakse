@@ -15,9 +15,27 @@ class MenuController extends Controller
         return view('admin.masterdata.menus.index');
     }
 
-    public function data()
+    public function data(Request $request)
     {
-        $menus = Menu::with('parent:id,name')->orderBy('sort_order')->orderBy('name')->get()->map(function ($m) {
+        $query = Menu::with('parent:id,name')->orderBy('sort_order')->orderBy('name');
+
+        if ($status = $request->string('status')) {
+            if ($status === 'active') {
+                $query->where('is_active', true);
+            } elseif ($status === 'inactive') {
+                $query->where('is_active', false);
+            }
+        }
+
+        if ($search = trim((string) $request->input('q', ''))) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('slug', 'like', "%{$search}%")
+                    ->orWhere('route', 'like', "%{$search}%");
+            });
+        }
+
+        $menus = $query->get()->map(function ($m) {
             return [
                 'id' => $m->id,
                 'name' => $m->name,
@@ -82,4 +100,3 @@ class MenuController extends Controller
         return redirect()->route('admin.masterdata.menus.index')->with('success', 'Menu berhasil dihapus');
     }
 }
-

@@ -13,12 +13,26 @@ class UserController extends Controller
 {
     public function index()
     {
-        return view('admin.masterdata.users.index');
+        $roles = Role::orderBy('name')->get(['id', 'name']);
+        return view('admin.masterdata.users.index', compact('roles'));
     }
 
-    public function data()
+    public function data(Request $request)
     {
-        $users = User::with('roles:id,name')->orderBy('name')->get()->map(function ($u) {
+        $query = User::with('roles:id,name')->orderBy('name');
+
+        if ($roleId = $request->integer('role_id')) {
+            $query->whereHas('roles', fn ($q) => $q->where('roles.id', $roleId));
+        }
+
+        if ($search = trim((string) $request->input('q', ''))) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        $users = $query->get()->map(function ($u) {
             return [
                 'id' => $u->id,
                 'name' => $u->name,
@@ -26,6 +40,7 @@ class UserController extends Controller
                 'roles' => $u->roles->pluck('name')->implode(', '),
             ];
         });
+
         return response()->json(['data' => $users]);
     }
 

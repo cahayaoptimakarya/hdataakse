@@ -35,21 +35,19 @@
                     <div class="px-7 py-5">
                         <div class="mb-10">
                             <label class="form-label fs-6 fw-bold">Role:</label>
-                            <select class="form-select form-select-solid fw-bolder" data-placeholder="Select option" data-allow-clear="true">
-                                <option></option>
-                                <option value="admin">Administrator</option>
-                                <option value="user">User</option>
+                            <select id="filter_user_role" class="form-select form-select-solid fw-bolder" data-placeholder="Select option" data-allow-clear="true">
+                                <option value="">Semua</option>
+                                @foreach($roles as $role)
+                                    <option value="{{ $role->id }}">{{ $role->name }}</option>
+                                @endforeach
                             </select>
                         </div>
                         <div class="d-flex justify-content-end">
-                            <button type="reset" class="btn btn-light btn-active-light-primary me-2">Reset</button>
-                            <button type="submit" class="btn btn-primary">Apply</button>
+                            <button type="button" class="btn btn-light btn-active-light-primary me-2" id="filter_users_reset">Reset</button>
+                            <button type="button" class="btn btn-primary" id="filter_users_apply">Apply</button>
                         </div>
                     </div>
                 </div>
-                <button type="button" class="btn btn-light-primary me-3">
-                    Export
-                </button>
                 @if(Perm::can(auth()->user(), 'admin.masterdata.users.index', 'create'))
                     <a href="{{ route('admin.masterdata.users.create') }}" class="btn btn-primary">
                         Add User
@@ -105,6 +103,10 @@
     document.addEventListener('DOMContentLoaded', function() {
         const refreshMenus = () => { if (window.KTMenu) KTMenu.createInstances(); };
         const tableEl = $('#users_table');
+        const searchInput = document.querySelector('[data-kt-filter="search"]');
+        const applyBtn = document.getElementById('filter_users_apply');
+        const resetBtn = document.getElementById('filter_users_reset');
+        const roleSelect = document.getElementById('filter_user_role');
         if (!tableEl.length || !$.fn.DataTable) {
             console.error('DataTables is not available or #users_table missing');
             return;
@@ -112,7 +114,14 @@
         const dt = tableEl.DataTable({
             processing: true, serverSide: false, dom: 'rtip',
             order: [[0, 'desc']],
-            ajax: { url: dataUrl, dataSrc: 'data' },
+            ajax: {
+                url: dataUrl,
+                dataSrc: 'data',
+                data: function(params) {
+                    params.q = searchInput?.value || '';
+                    params.role_id = roleSelect?.value || '';
+                }
+            },
             columns: [
                 { data: 'id' },
                 { data: 'name' },
@@ -133,12 +142,17 @@
         refreshMenus();
         dt.on('draw', refreshMenus);
 
-        const searchInput = document.querySelector('[data-kt-filter=\"search\"]');
         if (searchInput) {
-            searchInput.addEventListener('keyup', function (e) {
-                dt.search(e.target.value).draw();
+            searchInput.addEventListener('keyup', function () {
+                dt.ajax.reload();
             });
         }
+
+        applyBtn?.addEventListener('click', () => dt.ajax.reload());
+        resetBtn?.addEventListener('click', () => {
+            if (roleSelect) roleSelect.value = '';
+            dt.ajax.reload();
+        });
 
         $('#users_table').on('click', '.btn-delete', async function(e) {
             e.preventDefault();

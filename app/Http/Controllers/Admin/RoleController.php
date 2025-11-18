@@ -15,9 +15,31 @@ class RoleController extends Controller
         return view('admin.masterdata.roles.index');
     }
 
-    public function data()
+    public function data(Request $request)
     {
-        $roles = Role::orderBy('name')->withCount('users')->get()->map(function ($r) {
+        $query = Role::orderBy('name')->withCount('users');
+
+        if ($search = trim((string) $request->input('q', ''))) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('slug', 'like', "%{$search}%");
+            });
+        }
+
+        $filter = $request->input('user_count');
+        if ($filter !== null && $filter !== '') {
+            if ($filter === '0') {
+                $query->having('users_count', '=', 0);
+            } elseif ($filter === '1-5') {
+                $query->havingBetween('users_count', [1, 5]);
+            } elseif ($filter === '6-10') {
+                $query->havingBetween('users_count', [6, 10]);
+            } elseif ($filter === '11-plus') {
+                $query->having('users_count', '>=', 11);
+            }
+        }
+
+        $roles = $query->get()->map(function ($r) {
             return [
                 'id' => $r->id,
                 'name' => $r->name,
@@ -74,4 +96,3 @@ class RoleController extends Controller
         return redirect()->route('admin.masterdata.roles.index')->with('success', 'Role berhasil dihapus');
     }
 }
-
