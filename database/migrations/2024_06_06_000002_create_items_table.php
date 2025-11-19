@@ -9,6 +9,7 @@ return new class extends Migration {
     {
         Schema::create('items', function (Blueprint $table) {
             $table->id();
+            $table->string('sku', 100)->unique();
             $table->string('name', 150);
             $table->unsignedBigInteger('category_id')->default(0);
             $table->text('description')->nullable();

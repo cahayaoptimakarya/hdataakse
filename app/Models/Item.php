@@ -10,6 +10,7 @@ class Item extends Model
     use HasFactory;
 
     protected $fillable = [
+        'sku',
         'name',
         'category_id',
         'description',

@@ -49,7 +49,7 @@
                         </div>
                     </div>
                 </div>
-                <button type="button" class="btn btn-light-primary me-3" id="btn_import_items">Import CSV</button>
+                <button type="button" class="btn btn-light-primary me-3" id="btn_import_items" data-bs-toggle="modal" data-bs-target="#modal_import_items">Import CSV</button>
                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modal_item_form" id="btn_open_create_item">
                     Add Item
                 </button>
@@ -62,6 +62,7 @@
                 <thead>
                     <tr class="text-start text-gray-400 fw-bolder fs-7 text-uppercase gs-0">
                         <th>ID</th>
+                        <th>SKU</th>
                         <th>Nama</th>
                         <th>Kategori</th>
                         <th>Deskripsi</th>
@@ -93,6 +94,11 @@
                 <form class="form" id="item_form">
                     @csrf
                     <input type="hidden" name="item_id" id="item_id" />
+                    <div class="fv-row mb-7">
+                        <label class="required fs-6 fw-bold form-label mb-2">SKU</label>
+                        <input type="text" class="form-control form-control-solid" name="sku" id="item_sku" required />
+                        <div class="invalid-feedback" id="error_sku"></div>
+                    </div>
                     <div class="fv-row mb-7">
                         <label class="required fs-6 fw-bold form-label mb-2">Nama</label>
                         <input type="text" class="form-control form-control-solid" name="name" id="item_name" required />
@@ -127,6 +133,48 @@
     </div>
 </div>
 <!--end::Modal-->
+
+<!--begin::Import Modal-->
+<div class="modal fade" id="modal_import_items" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered mw-650px">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="fw-bolder">Import Items (CSV)</h2>
+                <div class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal">
+                    <span class="svg-icon svg-icon-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <rect opacity="0.5" x="6" y="17.3137" width="16" height="2" rx="1" transform="rotate(-45 6 17.3137)" fill="black" />
+                            <rect x="7.41422" y="6" width="16" height="2" rx="1" transform="rotate(45 7.41422 6)" fill="black" />
+                        </svg>
+                    </span>
+                </div>
+            </div>
+            <div class="modal-body scroll-y px-10 py-10">
+                <div class="mb-7">
+                    <p class="fw-semibold mb-3">Pastikan file CSV memiliki header dan kolom berikut:</p>
+                    <ul class="ms-5 mb-4">
+                        <li><strong>sku</strong> (wajib, unik)</li>
+                        <li><strong>name</strong> (wajib)</li>
+                        <li><strong>category</strong> (opsional, akan dibuat jika belum ada)</li>
+                        <li><strong>description</strong> (opsional)</li>
+                    </ul>
+                    <p class="text-muted small mb-1">Contoh header: <code>sku,name,category,description</code></p>
+                    <p class="text-muted small mb-0">Gunakan format CSV standar (separator koma / comma separated).</p>
+                </div>
+                <div class="mb-10">
+                    <label class="required fs-6 fw-bold form-label mb-2">File CSV</label>
+                    <input type="file" class="form-control form-control-solid" id="import_items_file" accept=".csv,text/csv" />
+                    <div class="invalid-feedback d-block" id="error_import_file"></div>
+                </div>
+                <div class="text-end">
+                    <button type="button" class="btn btn-light me-3" data-bs-dismiss="modal">Batal</button>
+                    <button type="button" class="btn btn-primary" id="btn_import_items_submit">Import</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!--end::Import Modal-->
 @endsection
 
 @push('scripts')
@@ -162,15 +210,18 @@
         const form = document.getElementById('item_form');
         const modalEl = document.getElementById('modal_item_form');
         const modal = modalEl ? new bootstrap.Modal(modalEl) : null;
+        const formSku = document.getElementById('item_sku');
         const formName = document.getElementById('item_name');
         const formCategory = document.getElementById('item_category_id');
         const formId = document.getElementById('item_id');
         const formDescription = document.getElementById('item_description');
         const titleEl = document.getElementById('modal_item_title');
         const importBtn = document.getElementById('btn_import_items');
-        const importInput = document.createElement('input');
-        importInput.type = 'file';
-        importInput.accept = '.csv,text/csv';
+        const importModalEl = document.getElementById('modal_import_items');
+        const importModal = importModalEl ? new bootstrap.Modal(importModalEl) : null;
+        const importInput = document.getElementById('import_items_file');
+        const importError = document.getElementById('error_import_file');
+        const importSubmit = document.getElementById('btn_import_items_submit');
 
         const setCategoryValue = (val) => {
             if (!formCategory) return;
@@ -219,11 +270,12 @@
             },
             columns: [
                 { data: 'id' },
+                { data: 'sku' },
                 { data: 'name' },
                 { data: 'category' },
                 { data: 'description' },
                 { data: 'id', orderable:false, searchable:false, className:'text-end', render: (data, type, row)=>{
-                    const editItem = `<div class="menu-item px-3"><a href="#" class="menu-link px-3 btn-edit" data-id="${data}" data-name="${row.name}" data-category="${row.category_id}" data-description="${row.description}">Edit</a></div>`;
+                    const editItem = `<div class="menu-item px-3"><a href="#" class="menu-link px-3 btn-edit" data-id="${data}" data-sku="${row.sku}" data-name="${row.name}" data-category="${row.category_id}" data-description="${row.description}">Edit</a></div>`;
                     const delItem = `<div class="menu-item px-3"><a href="#" class="menu-link px-3 text-danger btn-delete" data-id="${data}">Hapus</a></div>`;
                     return `
                         <div class="text-end">
@@ -262,7 +314,7 @@
         });
 
         const clearErrors = () => {
-            ['error_name','error_category_id','error_description'].forEach(id => {
+            ['error_sku','error_name','error_category_id','error_description'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.textContent = '';
             });
@@ -272,15 +324,24 @@
             if (!form) return;
             form.reset();
             formId.value = '';
+            if (formSku) formSku.value = '';
             setCategoryValue('0');
             clearErrors();
             if (titleEl) titleEl.textContent = 'Add Item';
         });
 
-        importBtn?.addEventListener('click', ()=> importInput.click());
-        importInput.addEventListener('change', async ()=> {
-            const file = importInput.files[0];
-            if (!file) return;
+        importBtn?.addEventListener('click', () => {
+            if (importInput) importInput.value = '';
+            if (importError) importError.textContent = '';
+        });
+
+        importSubmit?.addEventListener('click', async ()=> {
+            if (importError) importError.textContent = '';
+            const file = importInput?.files?.[0];
+            if (!file) {
+                if (importError) importError.textContent = 'Pilih file CSV terlebih dahulu.';
+                return;
+            }
             const formData = new FormData();
             formData.append('file', file);
             try {
@@ -309,7 +370,8 @@
                     return;
                 }
                 Swal?.fire('Berhasil', `${json.message || 'Import selesai'} (created: ${json.created}, updated: ${json.updated})`, 'success');
-                importInput.value = '';
+                if (importInput) importInput.value = '';
+                importModal?.hide();
                 reloadTable();
             } catch (err) {
                 console.error(err);
@@ -364,11 +426,13 @@
         tableEl.on('click', '.btn-edit', function(e) {
             e.preventDefault();
             const id = this.getAttribute('data-id');
+            const sku = this.getAttribute('data-sku');
             const name = this.getAttribute('data-name');
             const categoryId = this.getAttribute('data-category');
             const description = this.getAttribute('data-description') || '';
             if (!form) return;
             formId.value = id;
+            if (formSku) formSku.value = sku || '';
             formName.value = name;
             formDescription.value = description;
             setCategoryValue(categoryId || '0');

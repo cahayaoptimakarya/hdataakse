@@ -22,7 +22,7 @@
             </div>
             <!--end::Heaeder menu toggle-->
             <a href="/admin">
-                <img alt="Logo" src="/metronic/media/logos/logo-demo11.svg" class="h-20px h-lg-30px" />
+                <img alt="Logo" src="/metronic/media/logos/logo-cok.png" class="h-20px h-lg-50px" />
             </a>
         </div>
         <!--end::Header Logo-->

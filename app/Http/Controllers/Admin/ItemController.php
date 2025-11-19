@@ -7,6 +7,7 @@ use App\Models\Category;
 use App\Models\Item;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class ItemController extends Controller
 {
@@ -23,7 +24,8 @@ class ItemController extends Controller
         $search = trim((string) $request->input('q', ''));
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
+                $q->where('sku', 'like', "%{$search}%")
+                    ->orWhere('name', 'like', "%{$search}%")
                     ->orWhere('description', 'like', "%{$search}%");
             });
         }
@@ -49,6 +51,7 @@ class ItemController extends Controller
         $data = $query->get()->map(function ($i) {
             return [
                 'id' => $i->id,
+                'sku' => $i->sku,
                 'name' => $i->name,
                 'category' => $i->category?->name ?? '-',
                 'category_id' => $i->category_id,
@@ -67,6 +70,7 @@ class ItemController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
+            'sku' => ['required', 'string', 'max:100', 'unique:items,sku'],
             'name' => ['required', 'string', 'max:150'],
             'category_id' => ['nullable', 'integer', 'min:0', function($attr, $value, $fail) {
                 if ((int)$value === 0) return;
@@ -86,6 +90,7 @@ class ItemController extends Controller
             'message' => 'Item berhasil dibuat',
             'item' => [
                 'id' => $item->id,
+                'sku' => $item->sku,
                 'name' => $item->name,
                 'category_id' => $item->category_id,
             ]
@@ -95,6 +100,7 @@ class ItemController extends Controller
     public function update(Request $request, Item $item)
     {
         $validated = $request->validate([
+            'sku' => ['required', 'string', 'max:100', Rule::unique('items', 'sku')->ignore($item->id)],
             'name' => ['required', 'string', 'max:150'],
             'category_id' => ['nullable', 'integer', 'min:0', function($attr, $value, $fail) {
                 if ((int)$value === 0) return;
@@ -114,6 +120,7 @@ class ItemController extends Controller
             'message' => 'Item berhasil diperbarui',
             'item' => [
                 'id' => $item->id,
+                'sku' => $item->sku,
                 'name' => $item->name,
                 'category_id' => $item->category_id,
             ]
@@ -146,9 +153,9 @@ class ItemController extends Controller
         }
         $headers = array_map(fn($h) => strtolower(trim($h)), $headers);
 
-        $expected = ['name', 'category', 'description'];
+        $expected = ['sku', 'name', 'category', 'description'];
         if (array_diff($expected, $headers)) {
-            return response()->json(['message' => 'Header harus: name, category, description'], 422);
+            return response()->json(['message' => 'Header harus: sku, name, category, description'], 422);
         }
 
         $idx = array_flip($headers);
@@ -157,20 +164,26 @@ class ItemController extends Controller
         DB::beginTransaction();
         try {
             while (($row = fgetcsv($handle)) !== false) {
+                $sku = trim($row[$idx['sku']] ?? '');
                 $name = trim($row[$idx['name']] ?? '');
                 $categoryName = trim($row[$idx['category']] ?? '');
                 $description = trim($row[$idx['description']] ?? '');
-                if ($name === '') {
+                if ($sku === '' || $name === '') {
                     continue;
                 }
                 $catId = 0;
                 if ($categoryName !== '') {
-                    $cat = Category::firstOrCreate(['name' => $categoryName], ['parent_id' => 0]);
-                    $catId = $cat->id;
+                    $existingCat = Category::whereRaw('LOWER(name) = ?', [mb_strtolower($categoryName)])->first();
+                    if ($existingCat) {
+                        $catId = $existingCat->id;
+                    } else {
+                        $cat = Category::create(['name' => $categoryName, 'parent_id' => 0]);
+                        $catId = $cat->id;
+                    }
                 }
                 $item = Item::updateOrCreate(
-                    ['name' => $name],
-                    ['category_id' => $catId, 'description' => $description]
+                    ['sku' => $sku],
+                    ['name' => $name, 'category_id' => $catId, 'description' => $description]
                 );
                 $item->wasRecentlyCreated ? $created++ : $updated++;
             }
