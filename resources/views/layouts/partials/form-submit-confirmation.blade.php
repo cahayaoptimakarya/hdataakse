@@ -25,26 +25,41 @@
             },
         };
 
+        const triggerSubmit = (form) => {
+            if (typeof form.requestSubmit === 'function') {
+                form.dataset.swalBypass = 'true';
+                form.requestSubmit();
+            } else {
+                const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
+                form.dataset.swalBypass = 'true';
+                form.dispatchEvent(submitEvent);
+                if (!submitEvent.defaultPrevented) {
+                    form.submit();
+                }
+            }
+        };
+
         const bindConfirmation = (form) => {
             if (!form || form.dataset.swalConfirmBound === '1') {
                 return;
             }
             form.dataset.swalConfirmBound = '1';
             form.addEventListener('submit', function (event) {
-                if (form.dataset.swalSubmitting === 'true') {
+                if (form.dataset.swalBypass === 'true') {
+                    form.dataset.swalBypass = 'false';
                     return;
                 }
                 event.preventDefault();
+                event.stopImmediatePropagation();
                 Swal.fire(confirmationText).then((result) => {
                     if (result.isConfirmed) {
                         Swal.fire(loadingConfig);
                         setTimeout(() => {
-                            form.dataset.swalSubmitting = 'true';
-                            form.submit();
+                            triggerSubmit(form);
                         }, 1500);
                     }
                 });
-            });
+            }, true);
         };
 
         const observeForms = () => {

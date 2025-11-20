@@ -31,6 +31,25 @@ class UserSeeder extends Seeder
                 []
             );
         }
+
+        $users = [
+            ['name' => 'Budi Santoso', 'email' => 'budi.santoso@example.com'],
+            ['name' => 'Siti Rahmawati', 'email' => 'siti.rahmawati@example.com'],
+            ['name' => 'Andi Pratama', 'email' => 'andi.pratama@example.com'],
+            ['name' => 'Dewi Lestari', 'email' => 'dewi.lestari@example.com'],
+        ];
+
+        foreach ($users as $user) {
+            DB::table('users')->updateOrInsert(
+                ['email' => $user['email']],
+                [
+                    'name' => $user['name'],
+                    'password' => Hash::make('Password!2'),
+                    'email_verified_at' => now(),
+                    'updated_at' => now(),
+                    'created_at' => now(),
+                ]
+            );
+        }
     }
 }
-

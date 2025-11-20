@@ -144,6 +144,7 @@
     const storeUrl  = '{{ route('admin.masterdata.stores.store') }}';
     const updateTpl = '{{ route('admin.masterdata.stores.update', ':id') }}';
     const deleteTpl = '{{ route('admin.masterdata.stores.destroy', ':id') }}';
+    const defaultLogoUrl = "{{ asset('metronic/media/logos/logo-demo11.svg') }}";
 
     document.addEventListener('DOMContentLoaded', () => {
         const tableEl = $('#stores_table');
@@ -158,6 +159,8 @@
         const formPic = document.getElementById('store_pic_id');
         const formAddress = document.getElementById('store_address');
         const formId = document.getElementById('store_id');
+        const formLogo = document.getElementById('store_logo');
+        const logoPreview = document.getElementById('store_logo_preview');
         const titleEl = document.getElementById('modal_store_title');
 
         const select2Safe = (el, placeholder) => {
@@ -236,14 +239,16 @@
         });
 
         const clearErrors = () => {
-            ['error_name','error_pic_id','error_address'].forEach(id => {
+            ['error_name','error_pic_id','error_address','error_logo'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.textContent = '';
             });
-            const logoErr = document.getElementById('error_logo');
-            if (logoErr) logoErr.textContent = '';
-            const preview = document.getElementById('store_logo_preview');
-            if (preview) preview.src = '{{ asset('metronic/media/logos/logo-demo11.svg') }}';
+        };
+
+        const setLogoPreview = (url = null) => {
+            if (logoPreview) {
+                logoPreview.src = url || defaultLogoUrl;
+            }
         };
 
         document.getElementById('btn_open_create_store')?.addEventListener('click', () => {
@@ -256,7 +261,11 @@
                     $(formPic).val('').trigger('change.select2');
                 }
             }
+            if (formLogo) {
+                formLogo.value = '';
+            }
             clearErrors();
+            setLogoPreview();
             if (titleEl) titleEl.textContent = 'Add Store';
         });
 
@@ -296,8 +305,7 @@
                     return;
                 }
                 if (json?.store?.logo_url) {
-                    const preview = document.getElementById('store_logo_preview');
-                    if (preview) preview.src = json.store.logo_url;
+                    setLogoPreview(json.store.logo_url);
                 }
                 if (typeof Swal !== 'undefined') Swal.fire('Berhasil', json.message || 'Berhasil', 'success');
                 modal?.hide();
@@ -316,6 +324,7 @@
             const address = this.getAttribute('data-address') || '';
             const logo = this.getAttribute('data-logo');
             if (!form) return;
+            clearErrors();
             formId.value = id;
             formName.value = name;
             formAddress.value = address !== '-' ? address : '';
@@ -325,13 +334,17 @@
                     $(formPic).val(formPic.value).trigger('change.select2');
                 }
             }
-            const preview = document.getElementById('store_logo_preview');
-            if (preview && logo) {
-                preview.src = logo;
+            if (formLogo) {
+                formLogo.value = '';
             }
-            clearErrors();
+            setLogoPreview(logo || null);
             if (titleEl) titleEl.textContent = 'Edit Store';
             modal?.show();
+        });
+
+        modalEl?.addEventListener('hidden.bs.modal', () => {
+            if (formLogo) formLogo.value = '';
+            setLogoPreview();
         });
 
         tableEl.on('click', '.btn-delete', async function(e) {
