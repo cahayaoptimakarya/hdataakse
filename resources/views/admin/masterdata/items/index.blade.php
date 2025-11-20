@@ -263,9 +263,10 @@
 
         const setCategoryValue = (val) => {
             if (!formCategory) return;
-            formCategory.value = val ?? '0';
+            const normalized = (val === null || val === undefined || val === '' || val === 'null') ? '0' : String(val);
+            formCategory.value = normalized;
             if (typeof $ !== 'undefined' && $(formCategory).data('select2')) {
-                $(formCategory).val(formCategory.value).trigger('change');
+                $(formCategory).val(normalized).trigger('change');
             }
         };
 
