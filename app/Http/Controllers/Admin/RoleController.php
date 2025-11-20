@@ -5,8 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Role;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class RoleController extends Controller
 {
@@ -66,12 +67,19 @@ class RoleController extends Controller
         if (Role::where('slug', $slug)->exists()) {
             return back()->withErrors(['slug' => 'Slug sudah digunakan'])->withInput();
         }
-        Role::create([
-            'name' => $validated['name'],
-            'slug' => $slug,
-            'description' => $validated['description'] ?? null,
-        ]);
-        return redirect()->route('admin.masterdata.roles.index')->with('success', 'Role berhasil dibuat');
+        DB::beginTransaction();
+        try {
+            Role::create([
+                'name' => $validated['name'],
+                'slug' => $slug,
+                'description' => $validated['description'] ?? null,
+            ]);
+            DB::commit();
+            return redirect()->route('admin.masterdata.roles.index')->with('success', 'Role berhasil dibuat');
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return back()->withErrors(['role' => 'Gagal membuat role: '.$e->getMessage()])->withInput();
+        }
     }
 
     public function edit(Role $role)
@@ -86,13 +94,27 @@ class RoleController extends Controller
             'slug' => ['required', 'string', 'max:100', Rule::unique('roles', 'slug')->ignore($role->id)],
             'description' => ['nullable', 'string', 'max:255'],
         ]);
-        $role->update($validated);
-        return redirect()->route('admin.masterdata.roles.index')->with('success', 'Role berhasil diperbarui');
+        DB::beginTransaction();
+        try {
+            $role->update($validated);
+            DB::commit();
+            return redirect()->route('admin.masterdata.roles.index')->with('success', 'Role berhasil diperbarui');
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return back()->withErrors(['role' => 'Gagal memperbarui role: '.$e->getMessage()])->withInput();
+        }
     }
 
     public function destroy(Role $role)
     {
-        $role->delete();
-        return redirect()->route('admin.masterdata.roles.index')->with('success', 'Role berhasil dihapus');
+        DB::beginTransaction();
+        try {
+            $role->delete();
+            DB::commit();
+            return redirect()->route('admin.masterdata.roles.index')->with('success', 'Role berhasil dihapus');
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return back()->withErrors(['role' => 'Gagal menghapus role: '.$e->getMessage()]);
+        }
     }
 }

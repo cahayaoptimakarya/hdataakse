@@ -155,11 +155,13 @@
                     <ul class="ms-5 mb-4">
                         <li><strong>sku</strong> (wajib, unik)</li>
                         <li><strong>name</strong> (wajib)</li>
-                        <li><strong>category</strong> (opsional, akan dibuat jika belum ada)</li>
+                        <li><strong>parent_category</strong> (opsional, parent kategori; akan dibuat jika belum ada)</li>
+                        <li><strong>category</strong> (opsional, anak kategori; jika kosong akan dimasukkan ke kategori default "Tanpa Kategori")</li>
                         <li><strong>description</strong> (opsional)</li>
                     </ul>
-                    <p class="text-muted small mb-1">Contoh header: <code>sku,name,category,description</code></p>
-                    <p class="text-muted small mb-0">Gunakan format CSV standar (separator koma / comma separated).</p>
+                    <p class="text-muted small mb-1">Contoh header: <code>sku,name,parent_category,category,description</code></p>
+                    <p class="text-muted small mb-1">Gunakan format CSV standar (separator koma / comma separated).</p>
+                    <p class="text-muted small mb-0">Jika kolom category dikosongkan, item otomatis dimasukkan ke kategori "Tanpa Kategori".</p>
                 </div>
                 <div class="mb-10">
                     <label class="required fs-6 fw-bold form-label mb-2">File CSV</label>

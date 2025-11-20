@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -63,21 +64,35 @@ class UserController extends Controller
             'avatar' => ['nullable','image','mimes:jpg,jpeg,png','max:2048'],
         ]);
         $avatarPath = null;
-        if ($request->file('avatar')) {
-            $stored = $request->file('avatar')->store('avatars', 'public');
-            $avatarPath = 'storage/'.$stored;
+        $storedAvatar = null;
+
+        DB::beginTransaction();
+        try {
+            if ($request->file('avatar')) {
+                $storedAvatar = $request->file('avatar')->store('avatars', 'public');
+                $avatarPath = 'storage/'.$storedAvatar;
+            }
+
+            $user = User::create([
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'password' => Hash::make($validated['password']),
+                'avatar' => $avatarPath ?: User::defaultAvatar(),
+                'email_verified_at' => now(),
+            ]);
+            if (!empty($validated['roles'])) {
+                $user->roles()->sync($validated['roles']);
+            }
+
+            DB::commit();
+            return redirect()->route('admin.masterdata.users.index')->with('success', 'User berhasil dibuat');
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            if ($storedAvatar) {
+                Storage::disk('public')->delete($storedAvatar);
+            }
+            return back()->withErrors(['user' => 'Gagal membuat user: '.$e->getMessage()])->withInput();
         }
-        $user = User::create([
-            'name' => $validated['name'],
-            'email' => $validated['email'],
-            'password' => Hash::make($validated['password']),
-            'avatar' => $avatarPath ?: User::defaultAvatar(),
-            'email_verified_at' => now(),
-        ]);
-        if (!empty($validated['roles'])) {
-            $user->roles()->sync($validated['roles']);
-        }
-        return redirect()->route('admin.masterdata.users.index')->with('success', 'User berhasil dibuat');
     }
 
     public function edit(User $user)
@@ -104,27 +119,59 @@ class UserController extends Controller
         if (!empty($validated['password'])) {
             $update['password'] = Hash::make($validated['password']);
         }
-        if ($request->file('avatar')) {
-            $stored = $request->file('avatar')->store('avatars', 'public');
-            // Delete old avatar if it was user-uploaded
-            if ($user->avatar && str_starts_with($user->avatar, 'storage/avatars/')) {
-                $oldPath = str_replace('storage/', '', $user->avatar);
-                Storage::disk('public')->delete($oldPath);
+
+        $newAvatarPath = null;
+        $oldAvatarPath = null;
+
+        DB::beginTransaction();
+        try {
+            if ($request->file('avatar')) {
+                $newAvatarPath = $request->file('avatar')->store('avatars', 'public');
+                $update['avatar'] = 'storage/'.$newAvatarPath;
+                if ($user->avatar && str_starts_with($user->avatar, 'storage/avatars/')) {
+                    $oldAvatarPath = str_replace('storage/', '', $user->avatar);
+                }
             }
-            $update['avatar'] = 'storage/'.$stored;
+
+            $user->update($update);
+            $user->roles()->sync($validated['roles'] ?? []);
+            DB::commit();
+
+            if ($oldAvatarPath) {
+                Storage::disk('public')->delete($oldAvatarPath);
+            }
+
+            return redirect()->route('admin.masterdata.users.index')->with('success', 'User berhasil diperbarui');
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            if ($newAvatarPath) {
+                Storage::disk('public')->delete($newAvatarPath);
+            }
+            return back()->withErrors(['user' => 'Gagal memperbarui user: '.$e->getMessage()])->withInput();
         }
-        $user->update($update);
-        $user->roles()->sync($validated['roles'] ?? []);
-        return redirect()->route('admin.masterdata.users.index')->with('success', 'User berhasil diperbarui');
     }
 
     public function destroy(User $user)
     {
+        $avatarPath = null;
         if ($user->avatar && str_starts_with($user->avatar, 'storage/avatars/')) {
-            $oldPath = str_replace('storage/', '', $user->avatar);
-            Storage::disk('public')->delete($oldPath);
+            $avatarPath = str_replace('storage/', '', $user->avatar);
         }
-        $user->delete();
-        return redirect()->route('admin.masterdata.users.index')->with('success', 'User berhasil dihapus');
+
+        DB::beginTransaction();
+        try {
+            $user->roles()->detach();
+            $user->delete();
+            DB::commit();
+
+            if ($avatarPath) {
+                Storage::disk('public')->delete($avatarPath);
+            }
+
+            return redirect()->route('admin.masterdata.users.index')->with('success', 'User berhasil dihapus');
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return back()->withErrors(['user' => 'Gagal menghapus user: '.$e->getMessage()]);
+        }
     }
 }

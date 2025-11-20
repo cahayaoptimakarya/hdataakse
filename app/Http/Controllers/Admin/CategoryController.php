@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class CategoryController extends Controller
 {
@@ -73,16 +74,26 @@ class CategoryController extends Controller
         $parentId = $request->input('parent_id');
         $validated['parent_id'] = ($parentId === null || (int) $parentId === 0) ? 0 : $parentId;
 
-        $category = Category::create($validated);
+        DB::beginTransaction();
+        try {
+            $category = Category::create($validated);
+            DB::commit();
 
-        return response()->json([
-            'message' => 'Kategori berhasil dibuat',
-            'category' => [
-                'id' => $category->id,
-                'name' => $category->name,
-                'parent_id' => $category->parent_id,
-            ],
-        ]);
+            return response()->json([
+                'message' => 'Kategori berhasil dibuat',
+                'category' => [
+                    'id' => $category->id,
+                    'name' => $category->name,
+                    'parent_id' => $category->parent_id,
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Gagal membuat kategori',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     public function update(Request $request, Category $category)
@@ -100,22 +111,41 @@ class CategoryController extends Controller
         $parentId = $request->input('parent_id');
         $validated['parent_id'] = ($parentId === null || (int) $parentId === 0) ? 0 : $parentId;
 
-        $category->update($validated);
+        DB::beginTransaction();
+        try {
+            $category->update($validated);
+            DB::commit();
 
-        return response()->json([
-            'message' => 'Kategori berhasil diperbarui',
-            'category' => [
-                'id' => $category->id,
-                'name' => $category->name,
-                'parent_id' => $category->parent_id,
-            ],
-        ]);
+            return response()->json([
+                'message' => 'Kategori berhasil diperbarui',
+                'category' => [
+                    'id' => $category->id,
+                    'name' => $category->name,
+                    'parent_id' => $category->parent_id,
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Gagal memperbarui kategori',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     public function destroy(Category $category)
     {
-        $category->delete();
-
-        return response()->json(['message' => 'Kategori berhasil dihapus']);
+        DB::beginTransaction();
+        try {
+            $category->delete();
+            DB::commit();
+            return response()->json(['message' => 'Kategori berhasil dihapus']);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Gagal menghapus kategori',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 }

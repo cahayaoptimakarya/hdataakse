@@ -11,6 +11,7 @@ use Illuminate\Validation\Rule;
 
 class ItemController extends Controller
 {
+    protected ?int $defaultCategoryId = null;
     public function index()
     {
         $categories = Category::orderBy('name')->get(['id', 'name']);
@@ -84,17 +85,27 @@ class ItemController extends Controller
         $catId = $request->input('category_id');
         $validated['category_id'] = ($catId === null || (int)$catId === 0) ? 0 : $catId;
 
-        $item = Item::create($validated);
+        DB::beginTransaction();
+        try {
+            $item = Item::create($validated);
+            DB::commit();
 
-        return response()->json([
-            'message' => 'Item berhasil dibuat',
-            'item' => [
-                'id' => $item->id,
-                'sku' => $item->sku,
-                'name' => $item->name,
-                'category_id' => $item->category_id,
-            ]
-        ]);
+            return response()->json([
+                'message' => 'Item berhasil dibuat',
+                'item' => [
+                    'id' => $item->id,
+                    'sku' => $item->sku,
+                    'name' => $item->name,
+                    'category_id' => $item->category_id,
+                ]
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Gagal membuat item',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     public function update(Request $request, Item $item)
@@ -114,24 +125,43 @@ class ItemController extends Controller
         $catId = $request->input('category_id');
         $validated['category_id'] = ($catId === null || (int)$catId === 0) ? 0 : $catId;
 
-        $item->update($validated);
+        DB::beginTransaction();
+        try {
+            $item->update($validated);
+            DB::commit();
 
-        return response()->json([
-            'message' => 'Item berhasil diperbarui',
-            'item' => [
-                'id' => $item->id,
-                'sku' => $item->sku,
-                'name' => $item->name,
-                'category_id' => $item->category_id,
-            ]
-        ]);
+            return response()->json([
+                'message' => 'Item berhasil diperbarui',
+                'item' => [
+                    'id' => $item->id,
+                    'sku' => $item->sku,
+                    'name' => $item->name,
+                    'category_id' => $item->category_id,
+                ]
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Gagal memperbarui item',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     public function destroy(Item $item)
     {
-        $item->delete();
-
-        return response()->json(['message' => 'Item berhasil dihapus']);
+        DB::beginTransaction();
+        try {
+            $item->delete();
+            DB::commit();
+            return response()->json(['message' => 'Item berhasil dihapus']);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Gagal menghapus item',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     public function import(Request $request)
@@ -153,33 +183,35 @@ class ItemController extends Controller
         }
         $headers = array_map(fn($h) => strtolower(trim($h)), $headers);
 
-        $expected = ['sku', 'name', 'category', 'description'];
+        $expected = ['sku', 'name', 'parent_category', 'category', 'description'];
         if (array_diff($expected, $headers)) {
-            return response()->json(['message' => 'Header harus: sku, name, category, description'], 422);
+            return response()->json(['message' => 'Header harus: sku, name, parent_category, category, description'], 422);
         }
 
         $idx = array_flip($headers);
         $created = 0;
         $updated = 0;
+        $defaultCategoryId = $this->getDefaultCategoryId();
         DB::beginTransaction();
         try {
             while (($row = fgetcsv($handle)) !== false) {
                 $sku = trim($row[$idx['sku']] ?? '');
                 $name = trim($row[$idx['name']] ?? '');
+                $parentCategoryName = trim($row[$idx['parent_category']] ?? '');
                 $categoryName = trim($row[$idx['category']] ?? '');
                 $description = trim($row[$idx['description']] ?? '');
                 if ($sku === '' || $name === '') {
                     continue;
                 }
-                $catId = 0;
+                $parentCategoryId = 0;
+                if ($parentCategoryName !== '') {
+                    $parentCategory = $this->findOrCreateCategory($parentCategoryName, 0);
+                    $parentCategoryId = $parentCategory?->id ?? 0;
+                }
+                $catId = $defaultCategoryId;
                 if ($categoryName !== '') {
-                    $existingCat = Category::whereRaw('LOWER(name) = ?', [mb_strtolower($categoryName)])->first();
-                    if ($existingCat) {
-                        $catId = $existingCat->id;
-                    } else {
-                        $cat = Category::create(['name' => $categoryName, 'parent_id' => 0]);
-                        $catId = $cat->id;
-                    }
+                    $category = $this->findOrCreateCategory($categoryName, $parentCategoryId);
+                    $catId = $category?->id ?? $defaultCategoryId;
                 }
                 $item = Item::updateOrCreate(
                     ['sku' => $sku],
@@ -200,5 +232,39 @@ class ItemController extends Controller
             'created' => $created,
             'updated' => $updated,
         ]);
+    }
+
+    protected function findOrCreateCategory(string $name, int $parentId = 0): ?Category
+    {
+        $trimmed = trim($name);
+        if ($trimmed === '') {
+            return null;
+        }
+        $normalized = mb_strtolower($trimmed);
+        $category = Category::whereRaw('LOWER(name) = ?', [$normalized])->first();
+        if ($category) {
+            if ($parentId !== 0 && $category->parent_id !== $parentId) {
+                $category->parent_id = $parentId;
+                $category->save();
+            }
+            return $category;
+        }
+        return Category::create([
+            'name' => $trimmed,
+            'parent_id' => $parentId,
+        ]);
+    }
+
+    protected function getDefaultCategoryId(): int
+    {
+        if ($this->defaultCategoryId !== null) {
+            return $this->defaultCategoryId;
+        }
+        $default = Category::firstOrCreate(
+            ['name' => 'Tanpa Kategori'],
+            ['parent_id' => 0]
+        );
+        $this->defaultCategoryId = $default->id;
+        return $this->defaultCategoryId;
     }
 }

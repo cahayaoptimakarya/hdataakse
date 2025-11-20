@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Store;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class StoreController extends Controller
@@ -73,26 +74,42 @@ class StoreController extends Controller
         ]);
 
         $logoPath = null;
-        if ($request->file('logo')) {
-            $stored = $request->file('logo')->store('store-logos', 'public');
-            $logoPath = 'storage/'.$stored;
+        $storedLogo = null;
+
+        DB::beginTransaction();
+        try {
+            if ($request->file('logo')) {
+                $storedLogo = $request->file('logo')->store('store-logos', 'public');
+                $logoPath = 'storage/'.$storedLogo;
+            }
+
+            $store = Store::create([
+                'name' => $validated['name'],
+                'pic_id' => $validated['pic_id'] ?? null,
+                'logo' => $logoPath,
+                'address' => $validated['address'] ?? null,
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Toko berhasil dibuat',
+                'store' => [
+                    'id' => $store->id,
+                    'name' => $store->name,
+                    'logo_url' => $store->logo_url,
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            if ($storedLogo) {
+                Storage::disk('public')->delete($storedLogo);
+            }
+            return response()->json([
+                'message' => 'Gagal membuat toko',
+                'error' => $e->getMessage(),
+            ], 500);
         }
-
-        $store = Store::create([
-            'name' => $validated['name'],
-            'pic_id' => $validated['pic_id'] ?? null,
-            'logo' => $logoPath,
-            'address' => $validated['address'] ?? null,
-        ]);
-
-        return response()->json([
-            'message' => 'Toko berhasil dibuat',
-            'store' => [
-                'id' => $store->id,
-                'name' => $store->name,
-                'logo_url' => $store->logo_url,
-            ],
-        ]);
     }
 
     public function update(Request $request, Store $store)
@@ -110,34 +127,69 @@ class StoreController extends Controller
             'address' => $validated['address'] ?? null,
         ];
 
-        if ($request->file('logo')) {
-            $stored = $request->file('logo')->store('store-logos', 'public');
-            if ($store->logo && str_starts_with($store->logo, 'storage/store-logos/')) {
-                $oldPath = str_replace('storage/', '', $store->logo);
-                Storage::disk('public')->delete($oldPath);
+        $newLogoPath = null;
+        $oldLogoPath = null;
+
+        DB::beginTransaction();
+        try {
+            if ($request->file('logo')) {
+                $newLogoPath = $request->file('logo')->store('store-logos', 'public');
+                $update['logo'] = 'storage/'.$newLogoPath;
+                if ($store->logo && str_starts_with($store->logo, 'storage/store-logos/')) {
+                    $oldLogoPath = str_replace('storage/', '', $store->logo);
+                }
             }
-            $update['logo'] = 'storage/'.$stored;
+
+            $store->update($update);
+            DB::commit();
+
+            if ($oldLogoPath) {
+                Storage::disk('public')->delete($oldLogoPath);
+            }
+
+            return response()->json([
+                'message' => 'Toko berhasil diperbarui',
+                'store' => [
+                    'id' => $store->id,
+                    'name' => $store->name,
+                    'logo_url' => $store->logo_url,
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            if ($newLogoPath) {
+                Storage::disk('public')->delete($newLogoPath);
+            }
+            return response()->json([
+                'message' => 'Gagal memperbarui toko',
+                'error' => $e->getMessage(),
+            ], 500);
         }
-
-        $store->update($update);
-
-        return response()->json([
-            'message' => 'Toko berhasil diperbarui',
-            'store' => [
-                'id' => $store->id,
-                'name' => $store->name,
-                'logo_url' => $store->logo_url,
-            ],
-        ]);
     }
 
     public function destroy(Store $store)
     {
+        $logoPath = null;
         if ($store->logo && str_starts_with($store->logo, 'storage/store-logos/')) {
-            $oldPath = str_replace('storage/', '', $store->logo);
-            Storage::disk('public')->delete($oldPath);
+            $logoPath = str_replace('storage/', '', $store->logo);
         }
-        $store->delete();
-        return response()->json(['message' => 'Toko berhasil dihapus']);
+
+        DB::beginTransaction();
+        try {
+            $store->delete();
+            DB::commit();
+
+            if ($logoPath) {
+                Storage::disk('public')->delete($logoPath);
+            }
+
+            return response()->json(['message' => 'Toko berhasil dihapus']);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Gagal menghapus toko',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 }

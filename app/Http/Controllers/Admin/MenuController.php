@@ -5,8 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Menu;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
-use Illuminate\Support\Str;
 
 class MenuController extends Controller
 {
@@ -68,8 +68,16 @@ class MenuController extends Controller
             'is_active' => ['nullable','boolean'],
         ]);
         $validated['is_active'] = $request->boolean('is_active');
-        Menu::create($validated);
-        return redirect()->route('admin.masterdata.menus.index')->with('success', 'Menu berhasil dibuat');
+
+        DB::beginTransaction();
+        try {
+            Menu::create($validated);
+            DB::commit();
+            return redirect()->route('admin.masterdata.menus.index')->with('success', 'Menu berhasil dibuat');
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return back()->withErrors(['menu' => 'Gagal membuat menu: '.$e->getMessage()])->withInput();
+        }
     }
 
     public function edit(Menu $menu)
@@ -90,13 +98,28 @@ class MenuController extends Controller
             'is_active' => ['nullable','boolean'],
         ]);
         $validated['is_active'] = $request->boolean('is_active');
-        $menu->update($validated);
-        return redirect()->route('admin.masterdata.menus.index')->with('success', 'Menu berhasil diperbarui');
+
+        DB::beginTransaction();
+        try {
+            $menu->update($validated);
+            DB::commit();
+            return redirect()->route('admin.masterdata.menus.index')->with('success', 'Menu berhasil diperbarui');
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return back()->withErrors(['menu' => 'Gagal memperbarui menu: '.$e->getMessage()])->withInput();
+        }
     }
 
     public function destroy(Menu $menu)
     {
-        $menu->delete();
-        return redirect()->route('admin.masterdata.menus.index')->with('success', 'Menu berhasil dihapus');
+        DB::beginTransaction();
+        try {
+            $menu->delete();
+            DB::commit();
+            return redirect()->route('admin.masterdata.menus.index')->with('success', 'Menu berhasil dihapus');
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return back()->withErrors(['menu' => 'Gagal menghapus menu: '.$e->getMessage()]);
+        }
     }
 }
