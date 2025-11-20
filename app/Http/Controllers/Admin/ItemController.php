@@ -177,11 +177,14 @@ class ItemController extends Controller
             return response()->json(['message' => 'Tidak dapat membaca file'], 422);
         }
 
-        $headers = fgetcsv($handle);
+        $headers = fgetcsv($handle, 0, ';');
         if (!$headers) {
             return response()->json(['message' => 'File kosong'], 422);
         }
-        $headers = array_map(fn($h) => strtolower(trim($h)), $headers);
+        $headers = array_map(function ($h) {
+            $clean = ltrim($h ?? '', "\xEF\xBB\xBF");
+            return strtolower(trim($clean));
+        }, $headers);
 
         $expected = ['sku', 'name', 'parent_category', 'category', 'description'];
         if (array_diff($expected, $headers)) {
@@ -194,7 +197,7 @@ class ItemController extends Controller
         $defaultCategoryId = $this->getDefaultCategoryId();
         DB::beginTransaction();
         try {
-            while (($row = fgetcsv($handle)) !== false) {
+            while (($row = fgetcsv($handle, 0, ';')) !== false) {
                 $sku = trim($row[$idx['sku']] ?? '');
                 $name = trim($row[$idx['name']] ?? '');
                 $parentCategoryName = trim($row[$idx['parent_category']] ?? '');

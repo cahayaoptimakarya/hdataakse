@@ -224,6 +224,42 @@
         const importInput = document.getElementById('import_items_file');
         const importError = document.getElementById('error_import_file');
         const importSubmit = document.getElementById('btn_import_items_submit');
+        const confirmAction = async () => {
+            if (typeof Swal === 'undefined') {
+                return true;
+            }
+            const result = await Swal.fire({
+                title: 'Apakah Anda yakin?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Ya, lanjutkan',
+                cancelButtonText: 'Batal',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                allowEnterKey: false,
+                focusConfirm: false,
+            });
+            if (!result.isConfirmed) {
+                return false;
+            }
+            Swal.fire({
+                title: 'Memproses...',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                allowEnterKey: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                },
+            });
+            return true;
+        };
+        const closeSwal = () => {
+            if (typeof Swal !== 'undefined') {
+                Swal.close();
+            }
+        };
 
         const setCategoryValue = (val) => {
             if (!formCategory) return;
@@ -344,6 +380,10 @@
                 if (importError) importError.textContent = 'Pilih file CSV terlebih dahulu.';
                 return;
             }
+            const confirmed = await confirmAction();
+            if (!confirmed) {
+                return;
+            }
             const formData = new FormData();
             formData.append('file', file);
             try {
@@ -359,9 +399,11 @@
                 let json;
                 try { json = JSON.parse(text); } catch (e) {
                     console.error('Invalid JSON', text);
+                    closeSwal();
                     if (typeof Swal !== 'undefined') Swal.fire('Error', 'Respons server tidak valid', 'error');
                     return;
                 }
+                closeSwal();
                 if (!res.ok) {
                     if (json?.errors) {
                         const msg = Object.values(json.errors).flat().join(', ');
@@ -377,6 +419,7 @@
                 reloadTable();
             } catch (err) {
                 console.error(err);
+                closeSwal();
                 Swal?.fire('Error', 'Gagal import', 'error');
             }
         });
@@ -501,3 +544,5 @@
     });
 </script>
 @endpush
+
+@include('layouts.partials.form-submit-confirmation')

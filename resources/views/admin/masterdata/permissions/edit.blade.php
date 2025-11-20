@@ -68,3 +68,5 @@
     </div>
 </div>
 @endsection
+
+@include('layouts.partials.form-submit-confirmation')
