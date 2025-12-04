@@ -30,6 +30,8 @@ class RoleSeeder extends Seeder
         // Seed basic menu structure
         $menuRows = [
             ['name' => 'Dashboard', 'slug' => 'dashboard', 'route' => 'admin.dashboard', 'icon' => 'fa-solid fa-gauge-high', 'parent_slug' => null, 'sort_order' => 0],
+            ['name' => 'Import', 'slug' => 'import', 'route' => 'admin.import.index', 'icon' => 'fa-solid fa-file-import', 'parent_slug' => null, 'sort_order' => 5],
+            ['name' => 'Data', 'slug' => 'data', 'route' => 'admin.data.index', 'icon' => 'fa-solid fa-database', 'parent_slug' => null, 'sort_order' => 6],
             ['name' => 'Master Data', 'slug' => 'master-data', 'route' => null, 'icon' => 'fa-solid fa-database', 'parent_slug' => null, 'sort_order' => 10],
             ['name' => 'Users', 'slug' => 'users', 'route' => 'admin.masterdata.users.index', 'icon' => 'fa-solid fa-users', 'parent_slug' => 'master-data', 'sort_order' => 20],
             ['name' => 'Roles', 'slug' => 'roles', 'route' => 'admin.masterdata.roles.index', 'icon' => 'fa-solid fa-user-shield', 'parent_slug' => 'master-data', 'sort_order' => 21],

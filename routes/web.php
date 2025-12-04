@@ -6,6 +6,8 @@ use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\MenuController;
 use App\Http\Controllers\Admin\PermissionController;
+use App\Http\Controllers\Admin\ImportController;
+use App\Http\Controllers\Admin\DataController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -32,6 +34,18 @@ require __DIR__.'/auth.php';
 // Admin area
 Route::middleware(['auth', 'verified', 'menu.permission'])->prefix('admin')->as('admin.')->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+
+    Route::prefix('import')->as('import.')->group(function () {
+        Route::get('/', [ImportController::class, 'index'])->name('index');
+        Route::post('/', [ImportController::class, 'store'])->name('store');
+        Route::delete('/all', [ImportController::class, 'destroyAll'])->name('destroy');
+        Route::post('/shipments', [ImportController::class, 'storeShipments'])->name('shipments');
+        Route::delete('/shipments/all', [ImportController::class, 'destroyShipments'])->name('shipments.destroy');
+    });
+
+    Route::get('/data', [DataController::class, 'index'])->name('data.index');
+    Route::get('/data/export', [DataController::class, 'export'])->name('data.export');
+    Route::get('/data/unintegrated/export', [DataController::class, 'exportUnintegrated'])->name('data.export-unintegrated');
 
     Route::prefix('masterdata')->as('masterdata.')->group(function () {
         // Users DataTables
