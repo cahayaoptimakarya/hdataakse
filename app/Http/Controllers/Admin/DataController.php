@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\ScanResiShipment;
+use App\Models\ScanResiInstan;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -35,11 +36,33 @@ class DataController extends Controller
         $integratedCount = $integrated->count();
         $unintegratedCount = $unintegrated->count();
 
+        // Instan (berbasis order_id)
+        $instanAggregates = ScanResiShipment::select([
+                'sku',
+                DB::raw('SUM(quantity) as total_quantity'),
+            ])
+            ->whereIn('order_id', function ($q) {
+                $q->select('order_id')->from('scan_resi_instan');
+            })
+            ->groupBy('sku')
+            ->orderBy('sku')
+            ->get();
+
+        $orderMaster = ScanResiInstan::pluck('order_id');
+        $shipmentOrders = ScanResiShipment::whereNotNull('order_id')->distinct()->pluck('order_id');
+
+        $instanIntegrated = $orderMaster->intersect($shipmentOrders)->values();
+        $instanUnintegrated = $orderMaster->diff($shipmentOrders)->values();
+
         return view('admin.data.index', [
             'aggregates' => $aggregates,
             'integratedCount' => $integratedCount,
             'unintegrated' => $unintegrated,
             'unintegratedCount' => $unintegratedCount,
+            'instanAggregates' => $instanAggregates,
+            'instanIntegratedCount' => $instanIntegrated->count(),
+            'instanUnintegrated' => $instanUnintegrated,
+            'instanUnintegratedCount' => $instanUnintegrated->count(),
         ]);
     }
 
