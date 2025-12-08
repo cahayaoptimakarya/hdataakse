@@ -105,6 +105,11 @@
                 <div class="card-title">
                     <h2 class="fw-bolder mb-0">Rekap SKU (Instan)</h2>
                 </div>
+                <div class="card-toolbar">
+                    <a href="{{ route('admin.data.export-instan') }}" class="btn btn-light-primary">
+                        <i class="fa-solid fa-file-excel me-2"></i>Export Excel
+                    </a>
+                </div>
             </div>
             <div class="card-body py-6 px-6">
                 <div class="d-flex justify-content-between align-items-center mb-4">

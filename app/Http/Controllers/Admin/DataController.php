@@ -95,6 +95,35 @@ class DataController extends Controller
         ]);
     }
 
+    public function exportInstan(): StreamedResponse
+    {
+        $filename = 'rekap_sku_instan_'.now()->format('Ymd_His').'.csv';
+
+        $aggregates = ScanResiShipment::select([
+                'sku',
+                DB::raw('SUM(quantity) as total_quantity'),
+            ])
+            ->whereIn('order_id', function ($q) {
+                $q->select('order_id')->from('scan_resi_instan');
+            })
+            ->groupBy('sku')
+            ->orderBy('sku')
+            ->get();
+
+        $callback = function () use ($aggregates) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, ['SKU', 'Jumlah Total']);
+            foreach ($aggregates as $row) {
+                fputcsv($handle, [$row->sku, $row->total_quantity]);
+            }
+            fclose($handle);
+        };
+
+        return response()->streamDownload($callback, $filename, [
+            'Content-Type' => 'text/csv',
+        ]);
+    }
+
     public function exportUnintegrated(): StreamedResponse
     {
         $filename = 'resi_tidak_terintegrasi_'.now()->format('Ymd_His').'.csv';

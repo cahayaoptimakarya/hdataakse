@@ -47,6 +47,7 @@ Route::middleware(['auth', 'verified', 'menu.permission'])->prefix('admin')->as(
 
     Route::get('/data', [DataController::class, 'index'])->name('data.index');
     Route::get('/data/export', [DataController::class, 'export'])->name('data.export');
+    Route::get('/data/instan/export', [DataController::class, 'exportInstan'])->name('data.export-instan');
     Route::get('/data/unintegrated/export', [DataController::class, 'exportUnintegrated'])->name('data.export-unintegrated');
 
     Route::prefix('masterdata')->as('masterdata.')->group(function () {
