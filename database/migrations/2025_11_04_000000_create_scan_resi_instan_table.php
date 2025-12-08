@@ -7,24 +7,17 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {
-        Schema::create('scan_resi_shipments', function (Blueprint $table) {
+        Schema::create('scan_resi_instan', function (Blueprint $table) {
             $table->id();
-            $table->string('resi_number', 150);
-            $table->string('order_id', 150);
-            $table->string('sku', 120);
-            $table->unsignedInteger('quantity')->default(0);
+            $table->string('order_id', 150)->unique();
             $table->string('source_name')->nullable();
             $table->timestamp('scanned_at')->nullable();
             $table->timestamps();
-
-            $table->index('resi_number');
-            $table->index('order_id');
-            $table->index('sku');
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('scan_resi_shipments');
+        Schema::dropIfExists('scan_resi_instan');
     }
 };

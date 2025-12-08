@@ -39,6 +39,8 @@ Route::middleware(['auth', 'verified', 'menu.permission'])->prefix('admin')->as(
         Route::get('/', [ImportController::class, 'index'])->name('index');
         Route::post('/', [ImportController::class, 'store'])->name('store');
         Route::delete('/all', [ImportController::class, 'destroyAll'])->name('destroy');
+        Route::post('/instan', [ImportController::class, 'storeInstan'])->name('instan');
+        Route::delete('/instan/all', [ImportController::class, 'destroyInstan'])->name('instan.destroy');
         Route::post('/shipments', [ImportController::class, 'storeShipments'])->name('shipments');
         Route::delete('/shipments/all', [ImportController::class, 'destroyShipments'])->name('shipments.destroy');
     });

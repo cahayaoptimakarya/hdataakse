@@ -5,21 +5,19 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class ScanResiShipment extends Model
+class ScanResiInstan extends Model
 {
     use HasFactory;
 
+    protected $table = 'scan_resi_instan';
+
     protected $fillable = [
-        'resi_number',
         'order_id',
-        'sku',
-        'quantity',
         'source_name',
         'scanned_at',
     ];
 
     protected $casts = [
-        'quantity' => 'integer',
         'scanned_at' => 'datetime',
     ];
 }
