@@ -80,6 +80,30 @@ Route::middleware(['auth', 'verified', 'menu.permission'])->prefix('admin')->as(
         Route::put('/divisions/{division}', [DivisionController::class, 'update'])->name('divisions.update');
         Route::delete('/divisions/{division}', [DivisionController::class, 'destroy'])->name('divisions.destroy');
 
+        // Legacy routes (backward compatibility)
+        Route::get('/sub-divisions', [DivisionController::class, 'index'])->name('sub-divisions.index');
+        Route::get('/sub-divisions/data', [DivisionController::class, 'subData'])->name('sub-divisions.data');
+        Route::post('/sub-divisions', [DivisionController::class, 'storeSub'])->name('sub-divisions.store');
+        Route::put('/sub-divisions/{subDivision}', [DivisionController::class, 'updateSub'])->name('sub-divisions.update');
+        Route::delete('/sub-divisions/{subDivision}', [DivisionController::class, 'destroySub'])->name('sub-divisions.destroy');
+
+        Route::get('/akun-biaya', [AkunBiayaController::class, 'index'])->name('akun-biaya.index');
+        Route::get('/akun-biaya/data', [AkunBiayaController::class, 'data'])->name('akun-biaya.data');
+        Route::post('/akun-biaya', [AkunBiayaController::class, 'store'])->name('akun-biaya.store');
+        Route::put('/akun-biaya/{akunBiaya}', [AkunBiayaController::class, 'update'])->name('akun-biaya.update');
+        Route::delete('/akun-biaya/{akunBiaya}', [AkunBiayaController::class, 'destroy'])->name('akun-biaya.destroy');
+
+        Route::get('/sub-akun-biaya/data', [AkunBiayaController::class, 'subData'])->name('sub-akun-biaya.data');
+        Route::post('/sub-akun-biaya', [AkunBiayaController::class, 'storeSub'])->name('sub-akun-biaya.store');
+        Route::put('/sub-akun-biaya/{subAkunBiaya}', [AkunBiayaController::class, 'updateSub'])->name('sub-akun-biaya.update');
+        Route::delete('/sub-akun-biaya/{subAkunBiaya}', [AkunBiayaController::class, 'destroySub'])->name('sub-akun-biaya.destroy');
+
+        Route::get('/budgets', [BudgetController::class, 'index'])->name('budgets.index');
+        Route::get('/budgets/data', [BudgetController::class, 'data'])->name('budgets.data');
+        Route::post('/budgets', [BudgetController::class, 'store'])->name('budgets.store');
+        Route::put('/budgets/{budget}', [BudgetController::class, 'update'])->name('budgets.update');
+        Route::delete('/budgets/{budget}', [BudgetController::class, 'destroy'])->name('budgets.destroy');
+
         // Items
         Route::get('/items/data', [\App\Http\Controllers\Admin\ItemController::class, 'data'])->name('items.data');
         Route::resource('items', \App\Http\Controllers\Admin\ItemController::class)->except(['create','show','edit'])->names('items');
