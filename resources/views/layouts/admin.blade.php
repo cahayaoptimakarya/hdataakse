@@ -88,6 +88,88 @@
     <script src="{{ asset('metronic/plugins/global/plugins.bundle.js') }}"></script>
     <script src="{{ asset('metronic/js/scripts.bundle.js') }}"></script>
     <script src="{{ asset('metronic/plugins/custom/datatables/datatables.bundle.js') }}"></script>
+    <script>
+        // Simple SweetAlert2 wrapper used by masterdata pages.
+        window.AppSwal = window.AppSwal || (function () {
+            const defaults = {
+                confirm: {
+                    icon: 'warning',
+                    showCancelButton: true,
+                    buttonsStyling: false,
+                    confirmButtonText: 'Hapus',
+                    cancelButtonText: 'Batal',
+                    customClass: {
+                        confirmButton: 'btn btn-danger',
+                        cancelButton: 'btn btn-active-light'
+                    }
+                },
+                error: {
+                    icon: 'error',
+                    buttonsStyling: false,
+                    confirmButtonText: 'OK',
+                    customClass: {
+                        confirmButton: 'btn btn-primary'
+                    }
+                },
+                success: {
+                    icon: 'success',
+                    buttonsStyling: false,
+                    confirmButtonText: 'OK',
+                    customClass: {
+                        confirmButton: 'btn btn-primary'
+                    }
+                }
+            };
+
+            const ensureSwal = () => {
+                if (!window.Swal || typeof window.Swal.fire !== 'function') {
+                    console.error('SweetAlert2 (Swal) is not available');
+                    return false;
+                }
+                return true;
+            };
+
+            const normalizeButtonTypes = (config, options) => {
+                if (!options) return config;
+                const customClass = Object.assign({}, config.customClass || {});
+                if (!customClass.confirmButton && typeof options.confirmButtonClass === 'string') {
+                    customClass.confirmButton = options.confirmButtonClass;
+                }
+                if (!customClass.confirmButton && typeof options.confirmButtonType === 'string') {
+                    customClass.confirmButton = `btn btn-${options.confirmButtonType}`;
+                }
+                if (!customClass.cancelButton && typeof options.cancelButtonClass === 'string') {
+                    customClass.cancelButton = options.cancelButtonClass;
+                }
+                if (Object.keys(customClass).length) {
+                    config.customClass = customClass;
+                }
+                return config;
+            };
+
+            return {
+                confirm: async (text, options = {}) => {
+                    if (!ensureSwal()) return false;
+                    const config = normalizeButtonTypes(Object.assign({}, defaults.confirm, options), options);
+                    if (text !== undefined && text !== null) config.text = text;
+                    const result = await window.Swal.fire(config);
+                    return !!result.isConfirmed;
+                },
+                error: (text, options = {}) => {
+                    if (!ensureSwal()) return;
+                    const config = normalizeButtonTypes(Object.assign({}, defaults.error, options), options);
+                    if (text !== undefined && text !== null) config.text = text;
+                    return window.Swal.fire(config);
+                },
+                success: (text, options = {}) => {
+                    if (!ensureSwal()) return;
+                    const config = normalizeButtonTypes(Object.assign({}, defaults.success, options), options);
+                    if (text !== undefined && text !== null) config.text = text;
+                    return window.Swal.fire(config);
+                }
+            };
+        })();
+    </script>
     @stack('scripts')
     @yield('scripts')
 </body>
