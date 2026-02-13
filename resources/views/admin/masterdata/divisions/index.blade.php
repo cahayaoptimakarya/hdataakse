@@ -51,7 +51,7 @@
                         <path d="M11 19C6.55556 19 3 15.4444 3 11C3 6.55556 6.55556 3 11 3C15.4444 3 19 6.55556 19 11C19 15.4444 15.4444 19 11 19ZM11 5C7.53333 5 5 7.53333 5 11C5 14.4667 7.53333 17 11 17C14.4667 17 17 14.4667 17 11C17 7.53333 14.4667 5 11 5Z" fill="black" />
                     </svg>
                 </span>
-                <input type="text" class="form-control form-control-solid w-250px ps-14" placeholder="Search sub divisions" data-kt-filter="sub-division-search" />
+                <input type="text" class="form-control form-control-solid w-250px ps-14" placeholder="Search sub divisi" data-kt-filter="sub-division-search" />
             </div>
         </div>
         <div class="card-toolbar">
@@ -86,7 +86,7 @@
                     </div>
                 </div>
                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modal_sub_division_form" id="btn_open_create_sub_division">
-                    Add Sub Division
+                    Add Sub Divisi
                 </button>
             </div>
         </div>
@@ -152,7 +152,7 @@
     <div class="modal-dialog modal-dialog-centered mw-650px">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 class="fw-bolder" id="modal_sub_division_title">Add Sub Division</h2>
+                <h2 class="fw-bolder" id="modal_sub_division_title">Add Sub Divisi</h2>
                 <div class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal">
                     <span class="svg-icon svg-icon-1">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -205,10 +205,10 @@
     const divisionUpdateTpl = '{{ route('admin.masterdata.divisions.update', ':id') }}';
     const divisionDeleteTpl = '{{ route('admin.masterdata.divisions.destroy', ':id') }}';
 
-    const subDivisionDataUrl = '{{ route('admin.masterdata.sub-divisions.data') }}';
-    const subDivisionStoreUrl = '{{ route('admin.masterdata.sub-divisions.store') }}';
-    const subDivisionUpdateTpl = '{{ route('admin.masterdata.sub-divisions.update', ':id') }}';
-    const subDivisionDeleteTpl = '{{ route('admin.masterdata.sub-divisions.destroy', ':id') }}';
+    const subDivisionDataUrl = '{{ route('admin.keuangan.sub-divisi.data') }}';
+    const subDivisionStoreUrl = '{{ route('admin.keuangan.sub-divisi.store') }}';
+    const subDivisionUpdateTpl = '{{ route('admin.keuangan.sub-divisi.update', ':id') }}';
+    const subDivisionDeleteTpl = '{{ route('admin.keuangan.sub-divisi.destroy', ':id') }}';
 
     const ensureOption = (selectEl, id, name) => {
         if (!selectEl) return;
@@ -502,7 +502,7 @@
             if (subId) subId.value = '';
             setSelectValue(subDivisionSelect, '');
             clearSubErrors();
-            if (subTitle) subTitle.textContent = 'Add Sub Division';
+            if (subTitle) subTitle.textContent = 'Add Sub Divisi';
         });
 
         subForm?.addEventListener('submit', async (e) => {
@@ -562,7 +562,7 @@
             if (subName) subName.value = name || '';
             setSelectValue(subDivisionSelect, divisionId || '');
             clearSubErrors();
-            if (subTitle) subTitle.textContent = 'Edit Sub Division';
+            if (subTitle) subTitle.textContent = 'Edit Sub Divisi';
             subModal?.show();
         });
 

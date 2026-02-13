@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
-@section('title', 'Akun Biaya')
-@section('page_title', 'Akun Biaya')
+@section('title', 'Akun Pembayaran')
+@section('page_title', 'Akun Pembayaran')
 
 @section('content')
 <div class="card mb-6">
@@ -14,13 +14,13 @@
                         <path d="M11 19C6.55556 19 3 15.4444 3 11C3 6.55556 6.55556 3 11 3C15.4444 3 19 6.55556 19 11C19 15.4444 15.4444 19 11 19ZM11 5C7.53333 5 5 7.53333 5 11C5 14.4667 7.53333 17 11 17C14.4667 17 17 14.4667 17 11C17 7.53333 14.4667 5 11 5Z" fill="black" />
                     </svg>
                 </span>
-                <input type="text" class="form-control form-control-solid w-250px ps-14" placeholder="Search akun biaya" data-kt-filter="akun-search" />
+                <input type="text" class="form-control form-control-solid w-250px ps-14" placeholder="Search akun pembayaran" data-kt-filter="akun-search" />
             </div>
         </div>
         <div class="card-toolbar">
             <div class="d-flex justify-content-end" data-kt-user-table-toolbar="base">
                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modal_akun_form" id="btn_open_create_akun">
-                    Add Akun Biaya
+                    Add Akun Pembayaran
                 </button>
             </div>
         </div>
@@ -51,7 +51,7 @@
                         <path d="M11 19C6.55556 19 3 15.4444 3 11C3 6.55556 6.55556 3 11 3C15.4444 3 19 6.55556 19 11C19 15.4444 15.4444 19 11 19ZM11 5C7.53333 5 5 7.53333 5 11C5 14.4667 7.53333 17 11 17C14.4667 17 17 14.4667 17 11C17 7.53333 14.4667 5 11 5Z" fill="black" />
                     </svg>
                 </span>
-                <input type="text" class="form-control form-control-solid w-250px ps-14" placeholder="Search sub akun biaya" data-kt-filter="sub-akun-search" />
+                <input type="text" class="form-control form-control-solid w-250px ps-14" placeholder="Search sub akun pembayaran" data-kt-filter="sub-akun-search" />
             </div>
         </div>
         <div class="card-toolbar">
@@ -71,7 +71,7 @@
                     <div class="separator border-gray-200"></div>
                     <div class="px-7 py-5">
                         <div class="mb-10">
-                            <label class="form-label fs-6 fw-bold">Akun Biaya:</label>
+                            <label class="form-label fs-6 fw-bold">Akun Pembayaran:</label>
                             <select id="filter_sub_akun_akun" class="form-select form-select-solid fw-bolder" data-placeholder="Select option" data-allow-clear="true">
                                 <option value="">Semua</option>
                                 @foreach($akunBiaya as $akun)
@@ -86,7 +86,7 @@
                     </div>
                 </div>
                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modal_sub_akun_form" id="btn_open_create_sub_akun">
-                    Add Sub Akun Biaya
+                    Add Sub Akun Pembayaran
                 </button>
             </div>
         </div>
@@ -98,7 +98,7 @@
                     <tr class="text-start text-gray-400 fw-bolder fs-7 text-uppercase gs-0">
                         <th>ID</th>
                         <th>Nama</th>
-                        <th>Akun Biaya</th>
+                        <th>Akun Pembayaran</th>
                         <th class="text-end">Aksi</th>
                     </tr>
                 </thead>
@@ -113,7 +113,7 @@
     <div class="modal-dialog modal-dialog-centered mw-650px">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 class="fw-bolder" id="modal_akun_title">Add Akun Biaya</h2>
+                <h2 class="fw-bolder" id="modal_akun_title">Add Akun Pembayaran</h2>
                 <div class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal">
                     <span class="svg-icon svg-icon-1">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -152,7 +152,7 @@
     <div class="modal-dialog modal-dialog-centered mw-650px">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 class="fw-bolder" id="modal_sub_akun_title">Add Sub Akun Biaya</h2>
+                <h2 class="fw-bolder" id="modal_sub_akun_title">Add Sub Akun Pembayaran</h2>
                 <div class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal">
                     <span class="svg-icon svg-icon-1">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -167,9 +167,9 @@
                     @csrf
                     <input type="hidden" name="sub_akun_id" id="sub_akun_id" />
                     <div class="fv-row mb-7">
-                        <label class="required fs-6 fw-bold form-label mb-2">Akun Biaya</label>
-                        <select name="akun_biaya_id" id="sub_akun_akun_id" class="form-select form-select-solid" data-control="select2" data-placeholder="Pilih akun biaya" required>
-                            <option value="">Pilih akun biaya</option>
+                        <label class="required fs-6 fw-bold form-label mb-2">Akun Pembayaran</label>
+                        <select name="akun_biaya_id" id="sub_akun_akun_id" class="form-select form-select-solid" data-control="select2" data-placeholder="Pilih akun pembayaran" required>
+                            <option value="">Pilih akun pembayaran</option>
                             @foreach($akunBiaya as $akun)
                                 <option value="{{ $akun->id }}">{{ $akun->name }}</option>
                             @endforeach
@@ -200,15 +200,15 @@
 @push('scripts')
 <script>
     const csrfToken = '{{ csrf_token() }}';
-    const akunDataUrl = '{{ route('admin.masterdata.akun-biaya.data') }}';
-    const akunStoreUrl = '{{ route('admin.masterdata.akun-biaya.store') }}';
-    const akunUpdateTpl = '{{ route('admin.masterdata.akun-biaya.update', ':id') }}';
-    const akunDeleteTpl = '{{ route('admin.masterdata.akun-biaya.destroy', ':id') }}';
+    const akunDataUrl = '{{ route('admin.keuangan.akun-pembayaran.data') }}';
+    const akunStoreUrl = '{{ route('admin.keuangan.akun-pembayaran.store') }}';
+    const akunUpdateTpl = '{{ route('admin.keuangan.akun-pembayaran.update', ':id') }}';
+    const akunDeleteTpl = '{{ route('admin.keuangan.akun-pembayaran.destroy', ':id') }}';
 
-    const subAkunDataUrl = '{{ route('admin.masterdata.sub-akun-biaya.data') }}';
-    const subAkunStoreUrl = '{{ route('admin.masterdata.sub-akun-biaya.store') }}';
-    const subAkunUpdateTpl = '{{ route('admin.masterdata.sub-akun-biaya.update', ':id') }}';
-    const subAkunDeleteTpl = '{{ route('admin.masterdata.sub-akun-biaya.destroy', ':id') }}';
+    const subAkunDataUrl = '{{ route('admin.keuangan.sub-akun-pembayaran.data') }}';
+    const subAkunStoreUrl = '{{ route('admin.keuangan.sub-akun-pembayaran.store') }}';
+    const subAkunUpdateTpl = '{{ route('admin.keuangan.sub-akun-pembayaran.update', ':id') }}';
+    const subAkunDeleteTpl = '{{ route('admin.keuangan.sub-akun-pembayaran.destroy', ':id') }}';
 
     const ensureOption = (selectEl, id, name) => {
         if (!selectEl) return;
@@ -257,7 +257,7 @@
         };
 
         select2Safe(filterAkun, 'Semua');
-        select2Safe(subAkunSelect, 'Pilih akun biaya');
+        select2Safe(subAkunSelect, 'Pilih akun pembayaran');
 
         if (!akunTableEl.length || !$.fn.DataTable || !subTableEl.length) {
             console.error('DataTables unavailable');
@@ -385,7 +385,7 @@
             akunForm?.reset();
             if (akunId) akunId.value = '';
             clearAkunErrors();
-            if (akunTitle) akunTitle.textContent = 'Add Akun Biaya';
+            if (akunTitle) akunTitle.textContent = 'Add Akun Pembayaran';
         });
 
         akunForm?.addEventListener('submit', async (e) => {
@@ -416,7 +416,7 @@
                         const el = document.getElementById('error_akun_name');
                         if (el) el.textContent = json.errors.name.join(', ');
                     } else if (typeof Swal !== 'undefined') {
-                        Swal.fire('Error', json.message || 'Gagal menyimpan akun biaya', 'error');
+                        Swal.fire('Error', json.message || 'Gagal menyimpan akun pembayaran', 'error');
                     }
                     return;
                 }
@@ -430,7 +430,7 @@
                 reloadSubAkun();
             } catch (err) {
                 console.error(err);
-                if (typeof Swal !== 'undefined') Swal.fire('Error', 'Gagal menyimpan akun biaya', 'error');
+                if (typeof Swal !== 'undefined') Swal.fire('Error', 'Gagal menyimpan akun pembayaran', 'error');
             }
         });
 
@@ -442,7 +442,7 @@
             if (akunId) akunId.value = id;
             if (akunName) akunName.value = name || '';
             clearAkunErrors();
-            if (akunTitle) akunTitle.textContent = 'Edit Akun Biaya';
+            if (akunTitle) akunTitle.textContent = 'Edit Akun Pembayaran';
             akunModal?.show();
         });
 
@@ -453,7 +453,7 @@
             if (typeof Swal !== 'undefined') {
                 const res = await Swal.fire({
                     title: 'Apakah Anda yakin?',
-                    text: 'Akun biaya akan dihapus',
+                    text: 'Akun pembayaran akan dihapus',
                     icon: 'warning',
                     showCancelButton: true,
                     confirmButtonText: 'Hapus',
@@ -485,7 +485,7 @@
                     return;
                 }
                 if (!res.ok) {
-                    if (typeof Swal !== 'undefined') Swal.fire('Error', json.message || 'Gagal menghapus akun biaya', 'error');
+                    if (typeof Swal !== 'undefined') Swal.fire('Error', json.message || 'Gagal menghapus akun pembayaran', 'error');
                     return;
                 }
                 if (typeof Swal !== 'undefined') Swal.fire('Berhasil', json.message || 'Berhasil', 'success');
@@ -493,7 +493,7 @@
                 reloadSubAkun();
             } catch (err) {
                 console.error(err);
-                if (typeof Swal !== 'undefined') Swal.fire('Error', 'Gagal menghapus akun biaya', 'error');
+                if (typeof Swal !== 'undefined') Swal.fire('Error', 'Gagal menghapus akun pembayaran', 'error');
             }
         });
 
@@ -502,7 +502,7 @@
             if (subId) subId.value = '';
             setSelectValue(subAkunSelect, '');
             clearSubErrors();
-            if (subTitle) subTitle.textContent = 'Add Sub Akun Biaya';
+            if (subTitle) subTitle.textContent = 'Add Sub Akun Pembayaran';
         });
 
         subForm?.addEventListener('submit', async (e) => {
@@ -539,7 +539,7 @@
                             if (el) el.textContent = json.errors.akun_biaya_id.join(', ');
                         }
                     } else if (typeof Swal !== 'undefined') {
-                        Swal.fire('Error', json.message || 'Gagal menyimpan sub akun biaya', 'error');
+                        Swal.fire('Error', json.message || 'Gagal menyimpan sub akun pembayaran', 'error');
                     }
                     return;
                 }
@@ -548,7 +548,7 @@
                 reloadSubAkun();
             } catch (err) {
                 console.error(err);
-                if (typeof Swal !== 'undefined') Swal.fire('Error', 'Gagal menyimpan sub akun biaya', 'error');
+                if (typeof Swal !== 'undefined') Swal.fire('Error', 'Gagal menyimpan sub akun pembayaran', 'error');
             }
         });
 
@@ -562,7 +562,7 @@
             if (subName) subName.value = name || '';
             setSelectValue(subAkunSelect, akunId || '');
             clearSubErrors();
-            if (subTitle) subTitle.textContent = 'Edit Sub Akun Biaya';
+            if (subTitle) subTitle.textContent = 'Edit Sub Akun Pembayaran';
             subModal?.show();
         });
 
@@ -573,7 +573,7 @@
             if (typeof Swal !== 'undefined') {
                 const res = await Swal.fire({
                     title: 'Apakah Anda yakin?',
-                    text: 'Sub akun biaya akan dihapus',
+                    text: 'Sub akun pembayaran akan dihapus',
                     icon: 'warning',
                     showCancelButton: true,
                     confirmButtonText: 'Hapus',
@@ -605,14 +605,14 @@
                     return;
                 }
                 if (!res.ok) {
-                    if (typeof Swal !== 'undefined') Swal.fire('Error', json.message || 'Gagal menghapus sub akun biaya', 'error');
+                    if (typeof Swal !== 'undefined') Swal.fire('Error', json.message || 'Gagal menghapus sub akun pembayaran', 'error');
                     return;
                 }
                 if (typeof Swal !== 'undefined') Swal.fire('Berhasil', json.message || 'Berhasil', 'success');
                 reloadSubAkun();
             } catch (err) {
                 console.error(err);
-                if (typeof Swal !== 'undefined') Swal.fire('Error', 'Gagal menghapus sub akun biaya', 'error');
+                if (typeof Swal !== 'undefined') Swal.fire('Error', 'Gagal menghapus sub akun pembayaran', 'error');
             }
         });
     });

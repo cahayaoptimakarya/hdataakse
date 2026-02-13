@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
-@section('title', 'Budgets')
-@section('page_title', 'Budgets')
+@section('title', 'Budget')
+@section('page_title', 'Budget')
 
 @section('content')
 <div class="card">
@@ -14,7 +14,7 @@
                         <path d="M11 19C6.55556 19 3 15.4444 3 11C3 6.55556 6.55556 3 11 3C15.4444 3 19 6.55556 19 11C19 15.4444 15.4444 19 11 19ZM11 5C7.53333 5 5 7.53333 5 11C5 14.4667 7.53333 17 11 17C14.4667 17 17 14.4667 17 11C17 7.53333 14.4667 5 11 5Z" fill="black" />
                     </svg>
                 </span>
-                <input type="text" class="form-control form-control-solid w-250px ps-14" placeholder="Search budgets" data-kt-filter="search" />
+                <input type="text" class="form-control form-control-solid w-250px ps-14" placeholder="Search budget" data-kt-filter="search" />
             </div>
         </div>
         <div class="card-toolbar">
@@ -43,7 +43,7 @@
                             </select>
                         </div>
                         <div class="mb-10">
-                            <label class="form-label fs-6 fw-bold">Akun Biaya:</label>
+                            <label class="form-label fs-6 fw-bold">Akun Pembayaran:</label>
                             <select id="filter_budget_akun" class="form-select form-select-solid fw-bolder" data-placeholder="Select option" data-allow-clear="true">
                                 <option value="">Semua</option>
                                 @foreach($akunBiaya as $akun)
@@ -70,7 +70,7 @@
                     <tr class="text-start text-gray-400 fw-bolder fs-7 text-uppercase gs-0">
                         <th>ID</th>
                         <th>Divisi</th>
-                        <th>Akun Biaya</th>
+                        <th>Akun Pembayaran</th>
                         <th>Jumlah</th>
                         <th class="text-end">Aksi</th>
                     </tr>
@@ -111,9 +111,9 @@
                         <div class="invalid-feedback" id="error_division_id"></div>
                     </div>
                     <div class="fv-row mb-7">
-                        <label class="required fs-6 fw-bold form-label mb-2">Akun Biaya</label>
-                        <select name="akun_biaya_id" id="budget_akun_id" class="form-select form-select-solid" data-control="select2" data-placeholder="Pilih akun biaya" required>
-                            <option value="">Pilih akun biaya</option>
+                        <label class="required fs-6 fw-bold form-label mb-2">Akun Pembayaran</label>
+                        <select name="akun_biaya_id" id="budget_akun_id" class="form-select form-select-solid" data-control="select2" data-placeholder="Pilih akun pembayaran" required>
+                            <option value="">Pilih akun pembayaran</option>
                             @foreach($akunBiaya as $akun)
                                 <option value="{{ $akun->id }}">{{ $akun->name }}</option>
                             @endforeach
@@ -144,10 +144,10 @@
 @push('scripts')
 <script>
     const csrfToken = '{{ csrf_token() }}';
-    const dataUrl   = '{{ route('admin.masterdata.budgets.data') }}';
-    const storeUrl  = '{{ route('admin.masterdata.budgets.store') }}';
-    const updateTpl = '{{ route('admin.masterdata.budgets.update', ':id') }}';
-    const deleteTpl = '{{ route('admin.masterdata.budgets.destroy', ':id') }}';
+    const dataUrl   = '{{ route('admin.keuangan.budget.data') }}';
+    const storeUrl  = '{{ route('admin.keuangan.budget.store') }}';
+    const updateTpl = '{{ route('admin.keuangan.budget.update', ':id') }}';
+    const deleteTpl = '{{ route('admin.keuangan.budget.destroy', ':id') }}';
 
     const formatAmount = (value) => {
         const num = Number(value ?? 0);
@@ -180,7 +180,7 @@
         select2Safe(divisionFilter, 'Semua');
         select2Safe(akunFilter, 'Semua');
         select2Safe(formDivision, 'Pilih divisi');
-        select2Safe(formAkun, 'Pilih akun biaya');
+        select2Safe(formAkun, 'Pilih akun pembayaran');
 
         if (!tableEl.length || !$.fn.DataTable) {
             console.error('DataTables unavailable');

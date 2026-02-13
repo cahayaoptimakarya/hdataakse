@@ -80,30 +80,6 @@ Route::middleware(['auth', 'verified', 'menu.permission'])->prefix('admin')->as(
         Route::put('/divisions/{division}', [DivisionController::class, 'update'])->name('divisions.update');
         Route::delete('/divisions/{division}', [DivisionController::class, 'destroy'])->name('divisions.destroy');
 
-        Route::get('/sub-divisions/data', [DivisionController::class, 'subData'])->name('sub-divisions.data');
-        Route::post('/sub-divisions', [DivisionController::class, 'storeSub'])->name('sub-divisions.store');
-        Route::put('/sub-divisions/{subDivision}', [DivisionController::class, 'updateSub'])->name('sub-divisions.update');
-        Route::delete('/sub-divisions/{subDivision}', [DivisionController::class, 'destroySub'])->name('sub-divisions.destroy');
-
-        // Akun Biaya & Sub Akun Biaya
-        Route::get('/akun-biaya', [AkunBiayaController::class, 'index'])->name('akun-biaya.index');
-        Route::get('/akun-biaya/data', [AkunBiayaController::class, 'data'])->name('akun-biaya.data');
-        Route::post('/akun-biaya', [AkunBiayaController::class, 'store'])->name('akun-biaya.store');
-        Route::put('/akun-biaya/{akunBiaya}', [AkunBiayaController::class, 'update'])->name('akun-biaya.update');
-        Route::delete('/akun-biaya/{akunBiaya}', [AkunBiayaController::class, 'destroy'])->name('akun-biaya.destroy');
-
-        Route::get('/sub-akun-biaya/data', [AkunBiayaController::class, 'subData'])->name('sub-akun-biaya.data');
-        Route::post('/sub-akun-biaya', [AkunBiayaController::class, 'storeSub'])->name('sub-akun-biaya.store');
-        Route::put('/sub-akun-biaya/{subAkunBiaya}', [AkunBiayaController::class, 'updateSub'])->name('sub-akun-biaya.update');
-        Route::delete('/sub-akun-biaya/{subAkunBiaya}', [AkunBiayaController::class, 'destroySub'])->name('sub-akun-biaya.destroy');
-
-        // Budgets
-        Route::get('/budgets', [BudgetController::class, 'index'])->name('budgets.index');
-        Route::get('/budgets/data', [BudgetController::class, 'data'])->name('budgets.data');
-        Route::post('/budgets', [BudgetController::class, 'store'])->name('budgets.store');
-        Route::put('/budgets/{budget}', [BudgetController::class, 'update'])->name('budgets.update');
-        Route::delete('/budgets/{budget}', [BudgetController::class, 'destroy'])->name('budgets.destroy');
-
         // Items
         Route::get('/items/data', [\App\Http\Controllers\Admin\ItemController::class, 'data'])->name('items.data');
         Route::resource('items', \App\Http\Controllers\Admin\ItemController::class)->except(['create','show','edit'])->names('items');
@@ -117,5 +93,33 @@ Route::middleware(['auth', 'verified', 'menu.permission'])->prefix('admin')->as(
         Route::get('/permissions', [PermissionController::class, 'index'])->name('permissions.index');
         Route::get('/permissions/{role}/edit', [PermissionController::class, 'edit'])->name('permissions.edit');
         Route::put('/permissions/{role}', [PermissionController::class, 'update'])->name('permissions.update');
+    });
+
+    Route::prefix('keuangan')->as('keuangan.')->group(function () {
+        // Sub Divisi
+        Route::get('/sub-divisi', [DivisionController::class, 'index'])->name('sub-divisi.index');
+        Route::get('/sub-divisi/data', [DivisionController::class, 'subData'])->name('sub-divisi.data');
+        Route::post('/sub-divisi', [DivisionController::class, 'storeSub'])->name('sub-divisi.store');
+        Route::put('/sub-divisi/{subDivision}', [DivisionController::class, 'updateSub'])->name('sub-divisi.update');
+        Route::delete('/sub-divisi/{subDivision}', [DivisionController::class, 'destroySub'])->name('sub-divisi.destroy');
+
+        // Akun Pembayaran
+        Route::get('/akun-pembayaran', [AkunBiayaController::class, 'index'])->name('akun-pembayaran.index');
+        Route::get('/akun-pembayaran/data', [AkunBiayaController::class, 'data'])->name('akun-pembayaran.data');
+        Route::post('/akun-pembayaran', [AkunBiayaController::class, 'store'])->name('akun-pembayaran.store');
+        Route::put('/akun-pembayaran/{akunBiaya}', [AkunBiayaController::class, 'update'])->name('akun-pembayaran.update');
+        Route::delete('/akun-pembayaran/{akunBiaya}', [AkunBiayaController::class, 'destroy'])->name('akun-pembayaran.destroy');
+
+        Route::get('/sub-akun-pembayaran/data', [AkunBiayaController::class, 'subData'])->name('sub-akun-pembayaran.data');
+        Route::post('/sub-akun-pembayaran', [AkunBiayaController::class, 'storeSub'])->name('sub-akun-pembayaran.store');
+        Route::put('/sub-akun-pembayaran/{subAkunBiaya}', [AkunBiayaController::class, 'updateSub'])->name('sub-akun-pembayaran.update');
+        Route::delete('/sub-akun-pembayaran/{subAkunBiaya}', [AkunBiayaController::class, 'destroySub'])->name('sub-akun-pembayaran.destroy');
+
+        // Budget
+        Route::get('/budget', [BudgetController::class, 'index'])->name('budget.index');
+        Route::get('/budget/data', [BudgetController::class, 'data'])->name('budget.data');
+        Route::post('/budget', [BudgetController::class, 'store'])->name('budget.store');
+        Route::put('/budget/{budget}', [BudgetController::class, 'update'])->name('budget.update');
+        Route::delete('/budget/{budget}', [BudgetController::class, 'destroy'])->name('budget.destroy');
     });
 });

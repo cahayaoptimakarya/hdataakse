@@ -61,7 +61,7 @@ class AkunBiayaController extends Controller
             DB::commit();
 
             return response()->json([
-                'message' => 'Akun biaya berhasil dibuat',
+                'message' => 'Akun pembayaran berhasil dibuat',
                 'akun_biaya' => [
                     'id' => $akun->id,
                     'name' => $akun->name,
@@ -70,7 +70,7 @@ class AkunBiayaController extends Controller
         } catch (\Throwable $e) {
             DB::rollBack();
             return response()->json([
-                'message' => 'Gagal membuat akun biaya',
+                'message' => 'Gagal membuat akun pembayaran',
                 'error' => $e->getMessage(),
             ], 500);
         }
@@ -88,7 +88,7 @@ class AkunBiayaController extends Controller
             DB::commit();
 
             return response()->json([
-                'message' => 'Akun biaya berhasil diperbarui',
+                'message' => 'Akun pembayaran berhasil diperbarui',
                 'akun_biaya' => [
                     'id' => $akunBiaya->id,
                     'name' => $akunBiaya->name,
@@ -97,7 +97,7 @@ class AkunBiayaController extends Controller
         } catch (\Throwable $e) {
             DB::rollBack();
             return response()->json([
-                'message' => 'Gagal memperbarui akun biaya',
+                'message' => 'Gagal memperbarui akun pembayaran',
                 'error' => $e->getMessage(),
             ], 500);
         }
@@ -110,11 +110,11 @@ class AkunBiayaController extends Controller
             $akunBiaya->delete();
             DB::commit();
 
-            return response()->json(['message' => 'Akun biaya berhasil dihapus']);
+            return response()->json(['message' => 'Akun pembayaran berhasil dihapus']);
         } catch (\Throwable $e) {
             DB::rollBack();
             return response()->json([
-                'message' => 'Gagal menghapus akun biaya',
+                'message' => 'Gagal menghapus akun pembayaran',
                 'error' => $e->getMessage(),
             ], 500);
         }
@@ -178,7 +178,7 @@ class AkunBiayaController extends Controller
             DB::commit();
 
             return response()->json([
-                'message' => 'Sub akun biaya berhasil dibuat',
+                'message' => 'Sub akun pembayaran berhasil dibuat',
                 'sub_akun_biaya' => [
                     'id' => $sub->id,
                     'name' => $sub->name,
@@ -188,7 +188,7 @@ class AkunBiayaController extends Controller
         } catch (\Throwable $e) {
             DB::rollBack();
             return response()->json([
-                'message' => 'Gagal membuat sub akun biaya',
+                'message' => 'Gagal membuat sub akun pembayaran',
                 'error' => $e->getMessage(),
             ], 500);
         }
@@ -207,7 +207,7 @@ class AkunBiayaController extends Controller
             DB::commit();
 
             return response()->json([
-                'message' => 'Sub akun biaya berhasil diperbarui',
+                'message' => 'Sub akun pembayaran berhasil diperbarui',
                 'sub_akun_biaya' => [
                     'id' => $subAkunBiaya->id,
                     'name' => $subAkunBiaya->name,
@@ -217,7 +217,7 @@ class AkunBiayaController extends Controller
         } catch (\Throwable $e) {
             DB::rollBack();
             return response()->json([
-                'message' => 'Gagal memperbarui sub akun biaya',
+                'message' => 'Gagal memperbarui sub akun pembayaran',
                 'error' => $e->getMessage(),
             ], 500);
         }
@@ -230,11 +230,11 @@ class AkunBiayaController extends Controller
             $subAkunBiaya->delete();
             DB::commit();
 
-            return response()->json(['message' => 'Sub akun biaya berhasil dihapus']);
+            return response()->json(['message' => 'Sub akun pembayaran berhasil dihapus']);
         } catch (\Throwable $e) {
             DB::rollBack();
             return response()->json([
-                'message' => 'Gagal menghapus sub akun biaya',
+                'message' => 'Gagal menghapus sub akun pembayaran',
                 'error' => $e->getMessage(),
             ], 500);
         }
