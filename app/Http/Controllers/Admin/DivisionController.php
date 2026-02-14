@@ -7,6 +7,8 @@ use App\Models\Division;
 use App\Models\SubDivision;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Imports\SubDivisiDivisiImport;
 
 class DivisionController extends Controller
 {
@@ -236,6 +238,36 @@ class DivisionController extends Controller
             return response()->json([
                 'message' => 'Gagal menghapus sub divisi',
                 'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function importSubDivisi(Request $request)
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:xlsx,xls', 'max:5120'],
+        ]);
+
+        $import = new SubDivisiDivisiImport();
+
+        DB::beginTransaction();
+        try {
+            Excel::import($import, $request->file('file'));
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Import selesai',
+                'created_divisi' => $import->createdDivisi,
+                'created_sub_divisi' => $import->createdSubDivisi,
+                'skipped_divisi' => $import->skippedDivisi,
+                'skipped_sub_divisi' => $import->skippedSubDivisi,
+                'skipped_rows' => $import->skippedRows,
+                'skipped_details' => array_slice($import->skippedDetails, 0, 20),
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Gagal import: '.$e->getMessage(),
             ], 500);
         }
     }

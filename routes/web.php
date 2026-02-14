@@ -96,6 +96,7 @@ Route::middleware(['auth', 'verified', 'menu.permission'])->prefix('admin')->as(
         Route::post('/divisi', [DivisionController::class, 'store'])->name('divisi.store');
         Route::put('/divisi/{division}', [DivisionController::class, 'update'])->name('divisi.update');
         Route::delete('/divisi/{division}', [DivisionController::class, 'destroy'])->name('divisi.destroy');
+        Route::post('/divisi/import', [DivisionController::class, 'importSubDivisi'])->name('divisi.import');
 
         // Sub Divisi
         Route::get('/sub-divisi', [DivisionController::class, 'index'])->name('sub-divisi.index');
