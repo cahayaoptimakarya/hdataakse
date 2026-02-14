@@ -10,13 +10,13 @@ use Maatwebsite\Excel\Concerns\OnEachRow;
 use Maatwebsite\Excel\Concerns\SkipsEmptyRows;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Maatwebsite\Excel\Row;
-use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 
 class JurnalUmumImport implements OnEachRow, WithHeadingRow, SkipsEmptyRows
 {
     public int $created = 0;
     public int $skipped = 0;
     public array $errors = [];
+    public array $errorRows = [];
 
     private bool $headerChecked = false;
     private Collection $validSubDivisi;
@@ -24,8 +24,10 @@ class JurnalUmumImport implements OnEachRow, WithHeadingRow, SkipsEmptyRows
 
     public function __construct()
     {
-        $this->validSubDivisi = SubDivision::pluck('id')->flip();
-        $this->validSubAkun = SubAkunBiaya::pluck('id')->flip();
+        $this->validSubDivisi = SubDivision::pluck('id', 'name')
+            ->mapWithKeys(fn ($id, $name) => [self::normalizeName($name) => $id]);
+        $this->validSubAkun = SubAkunBiaya::pluck('id', 'name')
+            ->mapWithKeys(fn ($id, $name) => [self::normalizeName($name) => $id]);
     }
 
     public function onRow(Row $row): void
@@ -35,31 +37,27 @@ class JurnalUmumImport implements OnEachRow, WithHeadingRow, SkipsEmptyRows
 
         $this->validateHeaders($data);
 
-        $tanggalRaw = $data['tanggal'] ?? null;
         $keterangan = trim((string) ($data['keterangan'] ?? ''));
-        $subDivisiId = (int) ($data['sub_divisi_id'] ?? 0);
-        $subAkunId = (int) ($data['sub_akun_biaya_id'] ?? 0);
+        $toko = trim((string) ($data['toko'] ?? ''));
+        $kategori = trim((string) ($data['kategori'] ?? ''));
         $debetRaw = $data['debet'] ?? null;
         $kreditRaw = $data['kredit'] ?? null;
 
-        if ($this->isRowEmpty($tanggalRaw, $keterangan, $subDivisiId, $subAkunId, $debetRaw, $kreditRaw)) {
+        if ($this->isRowEmpty($keterangan, $toko, $kategori, $debetRaw, $kreditRaw)) {
             return;
         }
 
-        $tanggal = $this->parseDate($tanggalRaw);
-        if (!$tanggal) {
-            $this->errors[] = "Baris {$rowIndex}: tanggal tidak valid";
+        $subDivisiId = $this->validSubDivisi->get(self::normalizeName($toko));
+        if (!$subDivisiId) {
+            $this->errors[] = "Baris {$rowIndex}: toko tidak ditemukan";
+            $this->addErrorRow($data, "toko tidak ditemukan", $rowIndex);
             $this->skipped++;
             return;
         }
-
-        if (!$this->validSubDivisi->has($subDivisiId)) {
-            $this->errors[] = "Baris {$rowIndex}: sub_divisi_id tidak valid";
-            $this->skipped++;
-            return;
-        }
-        if (!$this->validSubAkun->has($subAkunId)) {
-            $this->errors[] = "Baris {$rowIndex}: sub_akun_biaya_id tidak valid";
+        $subAkunId = $this->validSubAkun->get(self::normalizeName($kategori));
+        if (!$subAkunId) {
+            $this->errors[] = "Baris {$rowIndex}: kategori tidak ditemukan";
+            $this->addErrorRow($data, "kategori tidak ditemukan", $rowIndex);
             $this->skipped++;
             return;
         }
@@ -69,18 +67,20 @@ class JurnalUmumImport implements OnEachRow, WithHeadingRow, SkipsEmptyRows
 
         if ($debet === null || $kredit === null) {
             $this->errors[] = "Baris {$rowIndex}: debet/kredit tidak valid";
+            $this->addErrorRow($data, "debet/kredit tidak valid", $rowIndex);
             $this->skipped++;
             return;
         }
 
         if ($debet < 0 || $kredit < 0) {
             $this->errors[] = "Baris {$rowIndex}: debet/kredit harus >= 0";
+            $this->addErrorRow($data, "debet/kredit harus >= 0", $rowIndex);
             $this->skipped++;
             return;
         }
 
         JurnalUmum::create([
-            'tanggal' => $tanggal,
+            'tanggal' => null,
             'keterangan' => $keterangan !== '' ? $keterangan : null,
             'sub_divisi_id' => $subDivisiId,
             'sub_akun_biaya_id' => $subAkunId,
@@ -97,51 +97,42 @@ class JurnalUmumImport implements OnEachRow, WithHeadingRow, SkipsEmptyRows
             return;
         }
 
-        $expected = ['tanggal', 'keterangan', 'sub_divisi_id', 'sub_akun_biaya_id', 'debet', 'kredit'];
+        $expected = ['keterangan', 'toko', 'kategori', 'debet', 'kredit'];
         $missing = array_diff($expected, array_keys($row));
         if ($missing) {
-            throw new \RuntimeException('Header harus: tanggal, keterangan, sub_divisi_id, sub_akun_biaya_id, debet, kredit');
+            throw new \RuntimeException('Header harus: keterangan, toko, kategori, debet, kredit');
         }
 
         $this->headerChecked = true;
     }
 
-    protected function isRowEmpty($tanggal, string $keterangan, int $subDivisiId, int $subAkunId, $debet, $kredit): bool
+    protected function isRowEmpty(string $keterangan, string $toko, string $kategori, $debet, $kredit): bool
     {
-        $tanggalEmpty = $tanggal === null || $tanggal === '';
         $debetEmpty = $debet === null || $debet === '';
         $kreditEmpty = $kredit === null || $kredit === '';
 
-        return $tanggalEmpty && $keterangan === '' && $subDivisiId === 0 && $subAkunId === 0 && $debetEmpty && $kreditEmpty;
+        return $keterangan === '' && $toko === '' && $kategori === '' && $debetEmpty && $kreditEmpty;
     }
 
-    protected function parseDate($value): ?string
+    protected function addErrorRow(array $data, string $message, int $rowIndex): void
     {
-        if ($value instanceof \DateTimeInterface) {
-            return $value->format('Y-m-d');
-        }
-
-        if (is_numeric($value)) {
-            try {
-                return ExcelDate::excelToDateTimeObject($value)->format('Y-m-d');
-            } catch (\Throwable $e) {
-                return null;
-            }
-        }
-
-        $value = trim((string) $value);
-        if ($value === '') return null;
-
-        $formats = ['Y-m-d', 'd/m/Y', 'd-m-Y', 'm/d/Y'];
-        foreach ($formats as $format) {
-            $dt = \DateTime::createFromFormat($format, $value);
-            if ($dt && $dt->format($format) === $value) {
-                return $dt->format('Y-m-d');
-            }
-        }
-
-        return null;
+        $this->errorRows[] = [
+            $data['keterangan'] ?? '',
+            $data['toko'] ?? '',
+            $data['kategori'] ?? '',
+            $data['debet'] ?? '',
+            $data['kredit'] ?? '',
+            $message,
+            $rowIndex,
+        ];
     }
+
+    protected static function normalizeName(?string $value): string
+    {
+        $value = trim((string) $value);
+        return mb_strtolower($value);
+    }
+
 
     protected function parseAmount($value): ?float
     {

@@ -18,7 +18,7 @@
                 <input type="file" name="file" id="jurnal_import_file" class="form-control form-control-solid" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" required>
                 <div class="text-danger small mt-2" id="jurnal_import_error"></div>
                 <div class="form-text mt-2">
-                    Header wajib: <code>tanggal</code>, <code>keterangan</code>, <code>sub_divisi_id</code>, <code>sub_akun_biaya_id</code>, <code>debet</code>, <code>kredit</code>.
+                    Header wajib: <code>keterangan</code>, <code>toko</code>, <code>kategori</code>, <code>debet</code>, <code>kredit</code>.
                 </div>
             </div>
             <div class="mb-10">
@@ -26,10 +26,11 @@
                 <ul class="text-muted fs-7 mb-0">
                     <li>Format file Excel (.xlsx/.xls), ukuran maksimal 5 MB.</li>
                     <li>Header berada di baris pertama.</li>
-                    <li>Format tanggal yang didukung: <code>YYYY-MM-DD</code>, <code>DD/MM/YYYY</code>, <code>DD-MM-YYYY</code>, <code>MM/DD/YYYY</code>, atau format tanggal Excel.</li>
-                    <li><code>sub_divisi_id</code> dan <code>sub_akun_biaya_id</code> harus sudah ada di database.</li>
+                    <li><code>toko</code> akan dicocokkan ke tabel <code>sub_divisions</code> (kolom <code>name</code>).</li>
+                    <li><code>kategori</code> akan dicocokkan ke tabel <code>sub_akun_biaya</code> (kolom <code>name</code>).</li>
                     <li><code>debet</code> dan <code>kredit</code> bernilai angka >= 0. Boleh pakai pemisah ribuan.</li>
                     <li>Baris kosong akan diabaikan. Maksimal 20 error akan ditampilkan pada ringkasan.</li>
+                    <li>Jika ada error, sistem akan menyediakan file Excel berisi semua baris error untuk diunduh.</li>
                 </ul>
             </div>
             <div class="d-flex align-items-center gap-3">
@@ -60,6 +61,9 @@
                 <div class="border rounded p-4">
                     <div class="fw-bold mb-3">Error (max 20)</div>
                     <ul class="mb-0" id="import_errors"></ul>
+                    <div class="mt-4" id="error_file_wrapper" style="display:none;">
+                        <a href="#" class="btn btn-light-danger" id="error_file_link" download>Download File Error</a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -81,6 +85,8 @@
         const createdEl = document.getElementById('import_created');
         const skippedEl = document.getElementById('import_skipped');
         const errorsEl = document.getElementById('import_errors');
+        const errorFileWrapper = document.getElementById('error_file_wrapper');
+        const errorFileLink = document.getElementById('error_file_link');
 
         const setLoading = (loading) => {
             if (!submitBtn) return;
@@ -98,6 +104,8 @@
             if (errorEl) errorEl.textContent = '';
             if (summaryEl) summaryEl.style.display = 'none';
             if (errorsEl) errorsEl.innerHTML = '';
+            if (errorFileWrapper) errorFileWrapper.style.display = 'none';
+            if (errorFileLink) errorFileLink.removeAttribute('href');
 
             const file = fileInput?.files?.[0];
             if (!file) {
@@ -138,8 +146,27 @@
                     });
                 }
                 if (summaryEl) summaryEl.style.display = 'flex';
+                if (json.error_file_url && errorFileWrapper && errorFileLink) {
+                    errorFileLink.href = json.error_file_url;
+                    errorFileWrapper.style.display = 'block';
+                }
                 if (typeof Swal !== 'undefined') {
-                    Swal.fire('Berhasil', json.message || 'Import selesai', 'success');
+                    if (json.error_file_url) {
+                        Swal.fire({
+                            title: 'Import selesai dengan error',
+                            text: 'Sebagian data gagal diimport. Download file error untuk detail.',
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonText: 'Download',
+                            cancelButtonText: 'Tutup',
+                        }).then((result) => {
+                            if (result.isConfirmed && json.error_file_url) {
+                                window.location.href = json.error_file_url;
+                            }
+                        });
+                    } else {
+                        Swal.fire('Berhasil', json.message || 'Import selesai', 'success');
+                    }
                 }
             } catch (err) {
                 if (errorEl) errorEl.textContent = 'Gagal import.';

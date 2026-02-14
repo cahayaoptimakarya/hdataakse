@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('jurnal_umum', function (Blueprint $table) {
             $table->id();
-            $table->date('tanggal');
+            $table->date('tanggal')->nullable();
             $table->string('keterangan')->nullable();
             $table->foreignId('sub_divisi_id')
                 ->constrained('sub_divisions')
