@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
-@section('title', 'Divisions')
-@section('page_title', 'Divisions')
+@section('title', 'Divisi')
+@section('page_title', 'Divisi')
 
 @section('content')
 <div class="card mb-6">
@@ -14,13 +14,13 @@
                         <path d="M11 19C6.55556 19 3 15.4444 3 11C3 6.55556 6.55556 3 11 3C15.4444 3 19 6.55556 19 11C19 15.4444 15.4444 19 11 19ZM11 5C7.53333 5 5 7.53333 5 11C5 14.4667 7.53333 17 11 17C14.4667 17 17 14.4667 17 11C17 7.53333 14.4667 5 11 5Z" fill="black" />
                     </svg>
                 </span>
-                <input type="text" class="form-control form-control-solid w-250px ps-14" placeholder="Search divisions" data-kt-filter="division-search" />
+                <input type="text" class="form-control form-control-solid w-250px ps-14" placeholder="Search divisi" data-kt-filter="division-search" />
             </div>
         </div>
         <div class="card-toolbar">
             <div class="d-flex justify-content-end" data-kt-user-table-toolbar="base">
                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modal_division_form" id="btn_open_create_division">
-                    Add Division
+                    Add Divisi
                 </button>
             </div>
         </div>
@@ -113,7 +113,7 @@
     <div class="modal-dialog modal-dialog-centered mw-650px">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 class="fw-bolder" id="modal_division_title">Add Division</h2>
+                <h2 class="fw-bolder" id="modal_division_title">Add Divisi</h2>
                 <div class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal">
                     <span class="svg-icon svg-icon-1">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -200,10 +200,10 @@
 @push('scripts')
 <script>
     const csrfToken = '{{ csrf_token() }}';
-    const divisionDataUrl = '{{ route('admin.masterdata.divisions.data') }}';
-    const divisionStoreUrl = '{{ route('admin.masterdata.divisions.store') }}';
-    const divisionUpdateTpl = '{{ route('admin.masterdata.divisions.update', ':id') }}';
-    const divisionDeleteTpl = '{{ route('admin.masterdata.divisions.destroy', ':id') }}';
+    const divisionDataUrl = '{{ route('admin.keuangan.divisi.data') }}';
+    const divisionStoreUrl = '{{ route('admin.keuangan.divisi.store') }}';
+    const divisionUpdateTpl = '{{ route('admin.keuangan.divisi.update', ':id') }}';
+    const divisionDeleteTpl = '{{ route('admin.keuangan.divisi.destroy', ':id') }}';
 
     const subDivisionDataUrl = '{{ route('admin.keuangan.sub-divisi.data') }}';
     const subDivisionStoreUrl = '{{ route('admin.keuangan.sub-divisi.store') }}';
@@ -385,7 +385,7 @@
             divisionForm?.reset();
             if (divisionId) divisionId.value = '';
             clearDivisionErrors();
-            if (divisionTitle) divisionTitle.textContent = 'Add Division';
+            if (divisionTitle) divisionTitle.textContent = 'Add Divisi';
         });
 
         divisionForm?.addEventListener('submit', async (e) => {
@@ -442,7 +442,7 @@
             if (divisionId) divisionId.value = id;
             if (divisionName) divisionName.value = name || '';
             clearDivisionErrors();
-            if (divisionTitle) divisionTitle.textContent = 'Edit Division';
+            if (divisionTitle) divisionTitle.textContent = 'Edit Divisi';
             divisionModal?.show();
         });
 
