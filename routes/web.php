@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\DataController;
 use App\Http\Controllers\Admin\DivisionController;
 use App\Http\Controllers\Admin\AkunBiayaController;
 use App\Http\Controllers\Admin\BudgetController;
+use App\Http\Controllers\Admin\JurnalUmumImportController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -121,5 +122,9 @@ Route::middleware(['auth', 'verified', 'menu.permission'])->prefix('admin')->as(
         Route::post('/budget', [BudgetController::class, 'store'])->name('budget.store');
         Route::put('/budget/{budget}', [BudgetController::class, 'update'])->name('budget.update');
         Route::delete('/budget/{budget}', [BudgetController::class, 'destroy'])->name('budget.destroy');
+
+        // Jurnal Umum Import
+        Route::get('/jurnal-umum', [JurnalUmumImportController::class, 'index'])->name('jurnal-umum.index');
+        Route::post('/jurnal-umum', [JurnalUmumImportController::class, 'store'])->name('jurnal-umum.store');
     });
 });
