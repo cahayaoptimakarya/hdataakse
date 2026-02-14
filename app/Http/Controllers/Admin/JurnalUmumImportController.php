@@ -38,12 +38,19 @@ class JurnalUmumImportController extends Controller
                 $errorFileUrl = '/storage/'.$path;
             }
 
+            $allFailed = $import->created === 0
+                && ($import->skipped > 0 || !empty($import->errors) || !empty($import->errorRows));
+            $message = $allFailed
+                ? 'Semua data tidak dimasukkan ke database karena ada error.'
+                : 'Import selesai';
+
             return response()->json([
-                'message' => 'Import selesai',
+                'message' => $message,
                 'created' => $import->created,
                 'skipped' => $import->skipped,
                 'errors' => array_slice($import->errors, 0, 20),
                 'error_file_url' => $errorFileUrl,
+                'all_failed' => $allFailed,
             ]);
         } catch (\RuntimeException $e) {
             DB::rollBack();

@@ -9,7 +9,6 @@ use App\Imports\AkunPembayaranImport;
 use App\Exports\AkunPembayaranSkippedExport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
 
 class AkunBiayaController extends Controller
@@ -262,7 +261,7 @@ class AkunBiayaController extends Controller
                 $filename = 'akun-pembayaran-skip-'.now()->format('Ymd_His').'.xlsx';
                 $path = 'akun-pembayaran-import-skip/'.$filename;
                 Excel::store(new AkunPembayaranSkippedExport($import->skippedDetails), $path, 'public');
-                $skippedFileUrl = Storage::disk('public')->url($path);
+                $skippedFileUrl = '/storage/'.$path;
             }
 
             return response()->json([

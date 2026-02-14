@@ -152,9 +152,12 @@
                 }
                 if (typeof Swal !== 'undefined') {
                     if (json.error_file_url) {
+                        const warnText = json.all_failed
+                            ? 'Semua data tidak dimasukkan ke database karena ada error.'
+                            : 'Sebagian data gagal diimport. Download file error untuk detail.';
                         Swal.fire({
                             title: 'Import selesai dengan error',
-                            text: 'Sebagian data gagal diimport. Download file error untuk detail.',
+                            text: warnText,
                             icon: 'warning',
                             showCancelButton: true,
                             confirmButtonText: 'Download',

@@ -8,7 +8,6 @@ use App\Models\SubDivision;
 use App\Exports\DivisiSubDivisiSkippedExport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Imports\SubDivisiDivisiImport;
 
@@ -262,7 +261,7 @@ class DivisionController extends Controller
                 $filename = 'divisi-sub-divisi-skip-'.now()->format('Ymd_His').'.xlsx';
                 $path = 'divisi-import-skip/'.$filename;
                 Excel::store(new DivisiSubDivisiSkippedExport($import->skippedDetails), $path, 'public');
-                $skippedFileUrl = Storage::disk('public')->url($path);
+                $skippedFileUrl = '/storage/'.$path;
             }
 
             return response()->json([
