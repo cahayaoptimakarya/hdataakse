@@ -194,6 +194,11 @@
                         <div class="fw-bold mb-2">Detail Data Skip (max 20)</div>
                         <ul class="mb-0" id="import_divisi_skipped_list"></ul>
                     </div>
+                    <div class="mt-3" id="import_divisi_skipped_download" style="display:none;">
+                        <a href="#" class="btn btn-sm btn-light-primary" id="import_divisi_download_link" target="_blank" rel="noopener">
+                            Download Data Skip
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -317,6 +322,8 @@
         const importRowsSkipped = document.getElementById('import_rows_skipped');
         const importSkippedDetails = document.getElementById('import_divisi_skipped_details');
         const importSkippedList = document.getElementById('import_divisi_skipped_list');
+        const importSkippedDownload = document.getElementById('import_divisi_skipped_download');
+        const importSkippedLink = document.getElementById('import_divisi_download_link');
 
         const select2Safe = (el, placeholder) => {
             if (el && typeof $ !== 'undefined' && $.fn.select2) {
@@ -463,6 +470,8 @@
             if (importSummary) importSummary.style.display = 'none';
             if (importSkippedList) importSkippedList.innerHTML = '';
             if (importSkippedDetails) importSkippedDetails.style.display = 'none';
+            if (importSkippedDownload) importSkippedDownload.style.display = 'none';
+            if (importSkippedLink) importSkippedLink.removeAttribute('href');
         });
 
         importSubmit?.addEventListener('click', async () => {
@@ -516,6 +525,10 @@
                 }
 
                 if (importSummary) importSummary.style.display = 'block';
+                if (json.skipped_file_url && importSkippedLink && importSkippedDownload) {
+                    importSkippedLink.href = json.skipped_file_url;
+                    importSkippedDownload.style.display = 'block';
+                }
                 if (typeof Swal !== 'undefined') {
                     Swal.fire('Berhasil', json.message || 'Import selesai', 'success');
                 }

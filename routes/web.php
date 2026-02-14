@@ -111,6 +111,7 @@ Route::middleware(['auth', 'verified', 'menu.permission'])->prefix('admin')->as(
         Route::post('/akun-pembayaran', [AkunBiayaController::class, 'store'])->name('akun-pembayaran.store');
         Route::put('/akun-pembayaran/{akunBiaya}', [AkunBiayaController::class, 'update'])->name('akun-pembayaran.update');
         Route::delete('/akun-pembayaran/{akunBiaya}', [AkunBiayaController::class, 'destroy'])->name('akun-pembayaran.destroy');
+        Route::post('/akun-pembayaran/import', [AkunBiayaController::class, 'importAkunPembayaran'])->name('akun-pembayaran.import');
 
         Route::get('/sub-akun-pembayaran/data', [AkunBiayaController::class, 'subData'])->name('sub-akun-pembayaran.data');
         Route::post('/sub-akun-pembayaran', [AkunBiayaController::class, 'storeSub'])->name('sub-akun-pembayaran.store');

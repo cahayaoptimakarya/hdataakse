@@ -5,8 +5,12 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\AkunBiaya;
 use App\Models\SubAkunBiaya;
+use App\Imports\AkunPembayaranImport;
+use App\Exports\AkunPembayaranSkippedExport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Maatwebsite\Excel\Facades\Excel;
 
 class AkunBiayaController extends Controller
 {
@@ -236,6 +240,45 @@ class AkunBiayaController extends Controller
             return response()->json([
                 'message' => 'Gagal menghapus sub akun pembayaran',
                 'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function importAkunPembayaran(Request $request)
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:xlsx,xls', 'max:5120'],
+        ]);
+
+        $import = new AkunPembayaranImport();
+
+        DB::beginTransaction();
+        try {
+            Excel::import($import, $request->file('file'));
+            DB::commit();
+
+            $skippedFileUrl = null;
+            if (!empty($import->skippedDetails)) {
+                $filename = 'akun-pembayaran-skip-'.now()->format('Ymd_His').'.xlsx';
+                $path = 'akun-pembayaran-import-skip/'.$filename;
+                Excel::store(new AkunPembayaranSkippedExport($import->skippedDetails), $path, 'public');
+                $skippedFileUrl = Storage::disk('public')->url($path);
+            }
+
+            return response()->json([
+                'message' => 'Import selesai',
+                'created_akun' => $import->createdAkun,
+                'created_sub_akun' => $import->createdSubAkun,
+                'skipped_akun' => $import->skippedAkun,
+                'skipped_sub_akun' => $import->skippedSubAkun,
+                'skipped_rows' => $import->skippedRows,
+                'skipped_details' => array_slice($import->skippedDetails, 0, 20),
+                'skipped_file_url' => $skippedFileUrl,
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Gagal import: '.$e->getMessage(),
             ], 500);
         }
     }

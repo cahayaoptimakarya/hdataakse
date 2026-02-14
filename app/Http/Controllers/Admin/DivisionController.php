@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Division;
 use App\Models\SubDivision;
+use App\Exports\DivisiSubDivisiSkippedExport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Imports\SubDivisiDivisiImport;
 
@@ -255,6 +257,14 @@ class DivisionController extends Controller
             Excel::import($import, $request->file('file'));
             DB::commit();
 
+            $skippedFileUrl = null;
+            if (!empty($import->skippedDetails)) {
+                $filename = 'divisi-sub-divisi-skip-'.now()->format('Ymd_His').'.xlsx';
+                $path = 'divisi-import-skip/'.$filename;
+                Excel::store(new DivisiSubDivisiSkippedExport($import->skippedDetails), $path, 'public');
+                $skippedFileUrl = Storage::disk('public')->url($path);
+            }
+
             return response()->json([
                 'message' => 'Import selesai',
                 'created_divisi' => $import->createdDivisi,
@@ -263,6 +273,7 @@ class DivisionController extends Controller
                 'skipped_sub_divisi' => $import->skippedSubDivisi,
                 'skipped_rows' => $import->skippedRows,
                 'skipped_details' => array_slice($import->skippedDetails, 0, 20),
+                'skipped_file_url' => $skippedFileUrl,
             ]);
         } catch (\Throwable $e) {
             DB::rollBack();

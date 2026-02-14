@@ -18,7 +18,10 @@
             </div>
         </div>
         <div class="card-toolbar">
-            <div class="d-flex justify-content-end" data-kt-user-table-toolbar="base">
+            <div class="d-flex justify-content-end gap-2" data-kt-user-table-toolbar="base">
+                <button type="button" class="btn btn-light-primary" data-bs-toggle="modal" data-bs-target="#modal_import_akun" id="btn_open_import_akun">
+                    Import Excel
+                </button>
                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modal_akun_form" id="btn_open_create_akun">
                     Add Akun Pembayaran
                 </button>
@@ -147,6 +150,62 @@
 </div>
 <!--end::Modal-->
 
+<!--begin::Import Modal-->
+<div class="modal fade" id="modal_import_akun" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered mw-650px">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="fw-bolder">Import Sub Akun + Akun Pembayaran (Excel)</h2>
+                <div class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal">
+                    <span class="svg-icon svg-icon-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <rect opacity="0.5" x="6" y="17.3137" width="16" height="2" rx="1" transform="rotate(-45 6 17.3137)" fill="black" />
+                            <rect x="7.41422" y="6" width="16" height="2" rx="1" transform="rotate(45 7.41422 6)" fill="black" />
+                        </svg>
+                    </span>
+                </div>
+            </div>
+            <div class="modal-body scroll-y mx-5 mx-xl-15 my-7">
+                <div class="mb-6">
+                    <div class="fw-bold mb-2">Format Kolom</div>
+                    <div class="text-muted fs-7">
+                        Kolom A: <strong>Sub Akun Pembayaran</strong>, Kolom B: <strong>Akun Pembayaran</strong>. Baris header opsional.
+                    </div>
+                </div>
+                <div class="mb-7">
+                    <label class="required fs-6 fw-bold form-label mb-2">File Excel</label>
+                    <input type="file" class="form-control form-control-solid" id="import_akun_file" accept=".xlsx,.xls" />
+                    <div class="invalid-feedback d-block" id="error_import_akun_file"></div>
+                </div>
+                <div class="text-end">
+                    <button type="button" class="btn btn-light me-3" data-bs-dismiss="modal">Batal</button>
+                    <button type="button" class="btn btn-primary" id="btn_import_akun_submit">Import</button>
+                </div>
+                <div class="mt-6 border rounded p-4" id="import_akun_summary" style="display:none;">
+                    <div class="fw-bold mb-2">Ringkasan Import</div>
+                    <div class="d-flex flex-wrap gap-6">
+                        <div><span class="text-muted">Akun dibuat:</span> <strong id="import_akun_created">0</strong></div>
+                        <div><span class="text-muted">Sub akun dibuat:</span> <strong id="import_sub_akun_created">0</strong></div>
+                        <div><span class="text-muted">Akun skip:</span> <strong id="import_akun_skipped">0</strong></div>
+                        <div><span class="text-muted">Sub akun skip:</span> <strong id="import_sub_akun_skipped">0</strong></div>
+                        <div><span class="text-muted">Baris skip (duplikat/kosong):</span> <strong id="import_akun_rows_skipped">0</strong></div>
+                    </div>
+                    <div class="mt-4" id="import_akun_skipped_details" style="display:none;">
+                        <div class="fw-bold mb-2">Detail Data Skip (max 20)</div>
+                        <ul class="mb-0" id="import_akun_skipped_list"></ul>
+                    </div>
+                    <div class="mt-3" id="import_akun_skipped_download" style="display:none;">
+                        <a href="#" class="btn btn-sm btn-light-primary" id="import_akun_download_link" target="_blank" rel="noopener">
+                            Download Data Skip
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!--end::Import Modal-->
+
 <!--begin::Modal-->
 <div class="modal fade" id="modal_sub_akun_form" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered mw-650px">
@@ -204,6 +263,7 @@
     const akunStoreUrl = '{{ route('admin.keuangan.akun-pembayaran.store') }}';
     const akunUpdateTpl = '{{ route('admin.keuangan.akun-pembayaran.update', ':id') }}';
     const akunDeleteTpl = '{{ route('admin.keuangan.akun-pembayaran.destroy', ':id') }}';
+    const importAkunUrl = '{{ route('admin.keuangan.akun-pembayaran.import') }}';
 
     const subAkunDataUrl = '{{ route('admin.keuangan.sub-akun-pembayaran.data') }}';
     const subAkunStoreUrl = '{{ route('admin.keuangan.sub-akun-pembayaran.store') }}';
@@ -248,6 +308,22 @@
         const subName = document.getElementById('sub_akun_name');
         const subAkunSelect = document.getElementById('sub_akun_akun_id');
         const subTitle = document.getElementById('modal_sub_akun_title');
+
+        const importModalEl = document.getElementById('modal_import_akun');
+        const importModal = importModalEl ? new bootstrap.Modal(importModalEl) : null;
+        const importFile = document.getElementById('import_akun_file');
+        const importError = document.getElementById('error_import_akun_file');
+        const importSubmit = document.getElementById('btn_import_akun_submit');
+        const importSummary = document.getElementById('import_akun_summary');
+        const importAkunCreated = document.getElementById('import_akun_created');
+        const importSubAkunCreated = document.getElementById('import_sub_akun_created');
+        const importAkunSkipped = document.getElementById('import_akun_skipped');
+        const importSubAkunSkipped = document.getElementById('import_sub_akun_skipped');
+        const importRowsSkipped = document.getElementById('import_akun_rows_skipped');
+        const importSkippedDetails = document.getElementById('import_akun_skipped_details');
+        const importSkippedList = document.getElementById('import_akun_skipped_list');
+        const importSkippedDownload = document.getElementById('import_akun_skipped_download');
+        const importSkippedLink = document.getElementById('import_akun_download_link');
 
         const select2Safe = (el, placeholder) => {
             if (el && typeof $ !== 'undefined' && $.fn.select2) {
@@ -386,6 +462,85 @@
             if (akunId) akunId.value = '';
             clearAkunErrors();
             if (akunTitle) akunTitle.textContent = 'Add Akun Pembayaran';
+        });
+
+        document.getElementById('btn_open_import_akun')?.addEventListener('click', () => {
+            if (importFile) importFile.value = '';
+            if (importError) importError.textContent = '';
+            if (importSummary) importSummary.style.display = 'none';
+            if (importSkippedList) importSkippedList.innerHTML = '';
+            if (importSkippedDetails) importSkippedDetails.style.display = 'none';
+            if (importSkippedDownload) importSkippedDownload.style.display = 'none';
+            if (importSkippedLink) importSkippedLink.removeAttribute('href');
+        });
+
+        importSubmit?.addEventListener('click', async () => {
+            if (importError) importError.textContent = '';
+            if (importSummary) importSummary.style.display = 'none';
+            if (importSkippedList) importSkippedList.innerHTML = '';
+            if (importSkippedDetails) importSkippedDetails.style.display = 'none';
+
+            const file = importFile?.files?.[0];
+            if (!file) {
+                if (importError) importError.textContent = 'Pilih file Excel terlebih dahulu.';
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const res = await fetch(importAkunUrl, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json',
+                    },
+                    body: formData,
+                });
+                const text = await res.text();
+                let json;
+                try { json = JSON.parse(text); } catch (err) {
+                    if (importError) importError.textContent = 'Respons server tidak valid.';
+                    return;
+                }
+                if (!res.ok) {
+                    if (importError) importError.textContent = json.message || 'Gagal import.';
+                    return;
+                }
+
+                if (importAkunCreated) importAkunCreated.textContent = json.created_akun ?? 0;
+                if (importSubAkunCreated) importSubAkunCreated.textContent = json.created_sub_akun ?? 0;
+                if (importAkunSkipped) importAkunSkipped.textContent = json.skipped_akun ?? 0;
+                if (importSubAkunSkipped) importSubAkunSkipped.textContent = json.skipped_sub_akun ?? 0;
+                if (importRowsSkipped) importRowsSkipped.textContent = json.skipped_rows ?? 0;
+
+                if (Array.isArray(json.skipped_details) && json.skipped_details.length && importSkippedList) {
+                    json.skipped_details.forEach((row) => {
+                        const li = document.createElement('li');
+                        li.textContent = `Baris ${row.row}: ${row.reason} (Sub Akun: ${row.sub_akun || '-'}, Akun: ${row.akun || '-'})`;
+                        importSkippedList.appendChild(li);
+                    });
+                    if (importSkippedDetails) importSkippedDetails.style.display = 'block';
+                }
+
+                if (importSummary) importSummary.style.display = 'block';
+                if (json.skipped_file_url && importSkippedLink && importSkippedDownload) {
+                    importSkippedLink.href = json.skipped_file_url;
+                    importSkippedDownload.style.display = 'block';
+                }
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire('Berhasil', json.message || 'Import selesai', 'success');
+                }
+
+                reloadAkun();
+                reloadSubAkun();
+            } catch (err) {
+                if (importError) importError.textContent = 'Gagal import.';
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire('Error', 'Gagal import', 'error');
+                }
+            }
         });
 
         akunForm?.addEventListener('submit', async (e) => {
