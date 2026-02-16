@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\DivisionController;
 use App\Http\Controllers\Admin\AkunBiayaController;
 use App\Http\Controllers\Admin\BudgetController;
 use App\Http\Controllers\Admin\JurnalUmumImportController;
+use App\Http\Controllers\Admin\LaporanJurnalUmumController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -128,5 +129,8 @@ Route::middleware(['auth', 'verified', 'menu.permission'])->prefix('admin')->as(
         // Jurnal Umum Import
         Route::get('/jurnal-umum', [JurnalUmumImportController::class, 'index'])->name('jurnal-umum.index');
         Route::post('/jurnal-umum', [JurnalUmumImportController::class, 'store'])->name('jurnal-umum.store');
+
+        // Laporan Jurnal Umum
+        Route::get('/laporan-jurnal-umum', [LaporanJurnalUmumController::class, 'index'])->name('laporan-jurnal-umum.index');
     });
 });

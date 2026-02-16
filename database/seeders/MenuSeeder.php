@@ -52,6 +52,7 @@ class MenuSeeder extends Seeder
             ['name' => 'Akun Pembayaran', 'slug' => 'akun-pembayaran', 'route' => 'admin.keuangan.akun-pembayaran.index', 'icon' => 'fa-solid fa-wallet', 'sort_order' => 2],
             ['name' => 'Budget', 'slug' => 'budget', 'route' => 'admin.keuangan.budget.index', 'icon' => 'fa-solid fa-sack-dollar', 'sort_order' => 3],
             ['name' => 'Jurnal Umum', 'slug' => 'jurnal-umum', 'route' => 'admin.keuangan.jurnal-umum.index', 'icon' => 'fa-solid fa-book', 'sort_order' => 4],
+            ['name' => 'Laporan Jurnal Umum', 'slug' => 'laporan-jurnal-umum', 'route' => 'admin.keuangan.laporan-jurnal-umum.index', 'icon' => 'fa-solid fa-chart-column', 'sort_order' => 5],
         ];
 
         foreach ($menuRows as $menu) {
