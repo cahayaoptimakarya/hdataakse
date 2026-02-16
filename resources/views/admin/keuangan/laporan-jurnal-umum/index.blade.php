@@ -17,20 +17,46 @@
             };
         @endphp
 
+        <form method="GET" class="mb-5">
+            <div class="row g-3 align-items-end">
+                <div class="col-12 col-md-6 col-lg-4">
+                    <label class="form-label fw-bold">Divisi</label>
+                    <select name="division_ids[]" class="form-select form-select-solid" multiple data-control="select2" data-placeholder="Pilih divisi">
+                        @foreach($division_options as $div)
+                            <option value="{{ $div->id }}" @selected(in_array($div->id, $selected_division_ids ?? [], true))>
+                                {{ $div->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary">Terapkan</button>
+                </div>
+                <div class="col-auto">
+                    <a href="{{ route('admin.keuangan.laporan-jurnal-umum.index') }}" class="btn btn-light">Reset</a>
+                </div>
+                <div class="col-12">
+                    <div class="form-text">Bisa pilih lebih dari satu divisi.</div>
+                </div>
+            </div>
+        </form>
+
         @if($akun_groups->isEmpty())
-            <div class="text-muted">Belum ada data jurnal umum.</div>
+            <div class="text-muted">
+                {{ !empty($selected_division_ids) ? 'Tidak ada data untuk divisi yang dipilih.' : 'Belum ada data jurnal umum.' }}
+            </div>
         @else
             <div class="table-responsive">
-                <table class="table align-middle table-row-dashed fs-6 gy-5">
+                <table class="table align-middle table-row-dashed fs-6 gy-5 table-bordered">
                     <thead>
-                        <tr class="text-start text-gray-400 fw-bolder fs-7 text-uppercase gs-0">
-                            <th rowspan="2">Biaya</th>
-                            <th colspan="{{ max(1, $divisions->count()) }}" class="text-center">Divisi</th>
-                            <th rowspan="2" class="text-end">Total</th>
+                        <tr class="text-start text-gray-400 fw-bolder fs-7 text-uppercase gs-0 align-middle">
+                            <th rowspan="2" class="align-middle">Biaya</th>
+                            <th colspan="{{ max(1, $divisions->count()) }}" class="text-center align-middle">Divisi</th>
+                            <th rowspan="2" class="text-end align-middle">Total</th>
                         </tr>
                         <tr class="text-start text-gray-400 fw-bolder fs-7 text-uppercase gs-0">
                             @foreach($divisions as $div)
-                                <th class="text-end">{{ $div['name'] }}</th>
+                                <th class="text-end text-nowrap">{{ $div['name'] }}</th>
                             @endforeach
                         </tr>
                     </thead>

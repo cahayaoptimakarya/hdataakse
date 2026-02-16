@@ -3,13 +3,29 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class LaporanJurnalUmumController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $rows = DB::table('jurnal_umum as ju')
+        $selectedDivisionIds = $request->input('division_ids', []);
+        if (!is_array($selectedDivisionIds)) {
+            $selectedDivisionIds = [$selectedDivisionIds];
+        }
+        $legacyDivisionId = $request->integer('division_id');
+        if ($legacyDivisionId > 0) {
+            $selectedDivisionIds[] = $legacyDivisionId;
+        }
+        $selectedDivisionIds = collect($selectedDivisionIds)
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        $rowsQuery = DB::table('jurnal_umum as ju')
             ->join('sub_divisions as sd', 'sd.id', '=', 'ju.sub_divisi_id')
             ->join('divisions as d', 'd.id', '=', 'sd.division_id')
             ->join('sub_akun_biaya as sab', 'sab.id', '=', 'ju.sub_akun_biaya_id')
@@ -29,13 +45,29 @@ class LaporanJurnalUmumController extends Controller
             ->groupBy('d.id', 'd.name', 'ab.id', 'ab.name', 'sab.id', 'sab.name')
             ->orderBy('d.name')
             ->orderBy('ab.name')
-            ->orderBy('sab.name')
-            ->get();
+            ->orderBy('sab.name');
 
-        $divisions = $rows->map(fn ($r) => ['id' => $r->division_id, 'name' => $r->division])
-            ->unique('id')
-            ->sortBy('name')
-            ->values();
+        if (!empty($selectedDivisionIds)) {
+            $rowsQuery->whereIn('d.id', $selectedDivisionIds);
+        }
+
+        $rows = $rowsQuery->get();
+
+        $divisionOptions = DB::table('divisions')
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        if (!empty($selectedDivisionIds)) {
+            $divisions = $divisionOptions
+                ->whereIn('id', $selectedDivisionIds)
+                ->map(fn ($d) => ['id' => $d->id, 'name' => $d->name])
+                ->values();
+        } else {
+            $divisions = $rows->map(fn ($r) => ['id' => $r->division_id, 'name' => $r->division])
+                ->unique('id')
+                ->sortBy('name')
+                ->values();
+        }
 
         $akunGroups = $rows->groupBy('akun_id')
             ->sortBy(fn ($items) => $items->first()->akun)
@@ -87,6 +119,8 @@ class LaporanJurnalUmumController extends Controller
             'grand_by_division' => $grandByDivision,
             'grand_total_debet' => (float) $rows->sum('total_debet'),
             'grand_total_kredit' => (float) $rows->sum('total_kredit'),
+            'division_options' => $divisionOptions,
+            'selected_division_ids' => $selectedDivisionIds,
         ]);
     }
 }
