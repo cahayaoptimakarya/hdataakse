@@ -32,28 +32,61 @@ class LaporanJurnalUmumController extends Controller
             ->orderBy('sab.name')
             ->get();
 
-        $grouped = $rows->groupBy('division_id')->map(function ($items) {
-            $akunGroups = $items->groupBy('akun_id')->map(function ($akunItems) {
+        $divisions = $rows->map(fn ($r) => ['id' => $r->division_id, 'name' => $r->division])
+            ->unique('id')
+            ->sortBy('name')
+            ->values();
+
+        $akunGroups = $rows->groupBy('akun_id')
+            ->sortBy(fn ($items) => $items->first()->akun)
+            ->map(function ($akunItems) use ($divisions) {
+                $subGroups = $akunItems->groupBy('sub_akun_id')
+                    ->sortBy(fn ($items) => $items->first()->sub_akun)
+                    ->map(function ($subItems) use ($divisions) {
+                        $byDivision = $subItems->keyBy('division_id');
+                        $cells = $divisions->map(function ($div) use ($byDivision) {
+                            $cell = $byDivision->get($div['id']);
+                            return [
+                                'debet' => (float) ($cell->total_debet ?? 0),
+                                'kredit' => (float) ($cell->total_kredit ?? 0),
+                            ];
+                        });
+
+                        return [
+                            'sub_akun' => $subItems->first()->sub_akun,
+                            'cells' => $cells,
+                        ];
+                    })
+                    ->values();
+
+                $totalsByDivision = $divisions->map(function ($div) use ($akunItems) {
+                    return [
+                        'debet' => (float) $akunItems->where('division_id', $div['id'])->sum('total_debet'),
+                        'kredit' => (float) $akunItems->where('division_id', $div['id'])->sum('total_kredit'),
+                    ];
+                });
+
                 return [
                     'akun' => $akunItems->first()->akun,
-                    'rows' => $akunItems,
-                    'total_debet' => $akunItems->sum('total_debet'),
-                    'total_kredit' => $akunItems->sum('total_kredit'),
+                    'sub_groups' => $subGroups,
+                    'totals_by_division' => $totalsByDivision,
                 ];
-            });
+            })
+            ->values();
 
+        $grandByDivision = $divisions->map(function ($div) use ($rows) {
             return [
-                'division' => $items->first()->division,
-                'akun_groups' => $akunGroups,
-                'total_debet' => $items->sum('total_debet'),
-                'total_kredit' => $items->sum('total_kredit'),
+                'debet' => (float) $rows->where('division_id', $div['id'])->sum('total_debet'),
+                'kredit' => (float) $rows->where('division_id', $div['id'])->sum('total_kredit'),
             ];
         });
 
         return view('admin.keuangan.laporan-jurnal-umum.index', [
-            'grouped' => $grouped,
-            'grand_total_debet' => $rows->sum('total_debet'),
-            'grand_total_kredit' => $rows->sum('total_kredit'),
+            'divisions' => $divisions,
+            'akun_groups' => $akunGroups,
+            'grand_by_division' => $grandByDivision,
+            'grand_total_debet' => (float) $rows->sum('total_debet'),
+            'grand_total_kredit' => (float) $rows->sum('total_kredit'),
         ]);
     }
 }
