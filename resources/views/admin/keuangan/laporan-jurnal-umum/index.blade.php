@@ -24,7 +24,7 @@
                 <table class="table align-middle table-row-dashed fs-6 gy-5">
                     <thead>
                         <tr class="text-start text-gray-400 fw-bolder fs-7 text-uppercase gs-0">
-                            <th>Akun Pembayaran</th>
+                            <th>Akun Pembayaran / Sub Akun</th>
                             <th class="text-end">Total Debet</th>
                             <th class="text-end">Total Kredit</th>
                         </tr>
@@ -34,11 +34,21 @@
                             <tr class="table-primary">
                                 <td colspan="3" class="fw-bolder">Divisi: {{ $group['division'] }}</td>
                             </tr>
-                            @foreach($group['rows'] as $row)
-                                <tr>
-                                    <td>{{ $row->akun }}</td>
-                                    <td class="text-end">{{ $formatRupiah($row->total_debet) }}</td>
-                                    <td class="text-end">{{ $formatRupiah($row->total_kredit) }}</td>
+                            @foreach($group['akun_groups'] as $akunGroup)
+                                <tr class="table-secondary">
+                                    <td colspan="3" class="fw-bolder">{{ $akunGroup['akun'] }}</td>
+                                </tr>
+                                @foreach($akunGroup['rows'] as $row)
+                                    <tr>
+                                        <td class="ps-6 fw-bold">{{ $row->sub_akun }}</td>
+                                        <td class="text-end">{{ $formatRupiah($row->total_debet) }}</td>
+                                        <td class="text-end">{{ $formatRupiah($row->total_kredit) }}</td>
+                                    </tr>
+                                @endforeach
+                                <tr class="table-light">
+                                    <td class="fw-bold">Total {{ $akunGroup['akun'] }}</td>
+                                    <td class="text-end fw-bold">{{ $formatRupiah($akunGroup['total_debet']) }}</td>
+                                    <td class="text-end fw-bold">{{ $formatRupiah($akunGroup['total_kredit']) }}</td>
                                 </tr>
                             @endforeach
                             <tr class="table-light">
