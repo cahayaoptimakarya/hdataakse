@@ -9,9 +9,12 @@ use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\OnEachRow;
 use Maatwebsite\Excel\Concerns\SkipsEmptyRows;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
+use Maatwebsite\Excel\Concerns\WithEvents;
+use Maatwebsite\Excel\Events\AfterImport;
+use Maatwebsite\Excel\Imports\HeadingRowFormatter;
 use Maatwebsite\Excel\Row;
 
-class JurnalUmumImport implements OnEachRow, WithHeadingRow, SkipsEmptyRows
+class JurnalUmumImport implements OnEachRow, WithHeadingRow, SkipsEmptyRows, WithEvents
 {
     public int $created = 0;
     public int $skipped = 0;
@@ -21,6 +24,8 @@ class JurnalUmumImport implements OnEachRow, WithHeadingRow, SkipsEmptyRows
     private bool $headerChecked = false;
     private Collection $validSubDivisi;
     private Collection $validSubAkun;
+    private array $pendingRows = [];
+    private array $headingColumnMap = [];
 
     public function __construct()
     {
@@ -50,14 +55,14 @@ class JurnalUmumImport implements OnEachRow, WithHeadingRow, SkipsEmptyRows
         $subDivisiId = $this->validSubDivisi->get(self::normalizeName($toko));
         if (!$subDivisiId) {
             $this->errors[] = "Baris {$rowIndex}: toko tidak ditemukan";
-            $this->addErrorRow($data, "toko tidak ditemukan", $rowIndex);
+            $this->addErrorRow($row, $data, "toko tidak ditemukan", $rowIndex);
             $this->skipped++;
             return;
         }
         $subAkunId = $this->validSubAkun->get(self::normalizeName($kategori));
         if (!$subAkunId) {
             $this->errors[] = "Baris {$rowIndex}: kategori tidak ditemukan";
-            $this->addErrorRow($data, "kategori tidak ditemukan", $rowIndex);
+            $this->addErrorRow($row, $data, "kategori tidak ditemukan", $rowIndex);
             $this->skipped++;
             return;
         }
@@ -67,28 +72,26 @@ class JurnalUmumImport implements OnEachRow, WithHeadingRow, SkipsEmptyRows
 
         if ($debet === null || $kredit === null) {
             $this->errors[] = "Baris {$rowIndex}: debet/kredit tidak valid";
-            $this->addErrorRow($data, "debet/kredit tidak valid", $rowIndex);
+            $this->addErrorRow($row, $data, "debet/kredit tidak valid", $rowIndex);
             $this->skipped++;
             return;
         }
 
         if ($debet < 0 || $kredit < 0) {
             $this->errors[] = "Baris {$rowIndex}: debet/kredit harus >= 0";
-            $this->addErrorRow($data, "debet/kredit harus >= 0", $rowIndex);
+            $this->addErrorRow($row, $data, "debet/kredit harus >= 0", $rowIndex);
             $this->skipped++;
             return;
         }
 
-        JurnalUmum::create([
+        $this->pendingRows[] = [
             'tanggal' => null,
             'keterangan' => $keterangan !== '' ? $keterangan : null,
             'sub_divisi_id' => $subDivisiId,
             'sub_akun_biaya_id' => $subAkunId,
             'debet' => $debet,
             'kredit' => $kredit,
-        ]);
-
-        $this->created++;
+        ];
     }
 
     protected function validateHeaders(array $row): void
@@ -114,14 +117,14 @@ class JurnalUmumImport implements OnEachRow, WithHeadingRow, SkipsEmptyRows
         return $keterangan === '' && $toko === '' && $kategori === '' && $debetEmpty && $kreditEmpty;
     }
 
-    protected function addErrorRow(array $data, string $message, int $rowIndex): void
+    protected function addErrorRow(Row $row, array $data, string $message, int $rowIndex): void
     {
         $this->errorRows[] = [
-            $data['keterangan'] ?? '',
-            $data['toko'] ?? '',
-            $data['kategori'] ?? '',
-            $data['debet'] ?? '',
-            $data['kredit'] ?? '',
+            $this->getDisplayValue($row, $data, 'keterangan'),
+            $this->getDisplayValue($row, $data, 'toko'),
+            $this->getDisplayValue($row, $data, 'kategori'),
+            $this->getDisplayValue($row, $data, 'debet'),
+            $this->getDisplayValue($row, $data, 'kredit'),
             $message,
             $rowIndex,
         ];
@@ -162,5 +165,94 @@ class JurnalUmumImport implements OnEachRow, WithHeadingRow, SkipsEmptyRows
         }
 
         return (float) $value;
+    }
+
+    protected function getDisplayValue(Row $row, array $data, string $key): string
+    {
+        $formatted = $this->getFormattedCellValue($row, $key);
+        if ($formatted !== null && $formatted !== '') {
+            return $formatted;
+        }
+
+        $fallback = $data[$key] ?? '';
+        return is_string($fallback) ? $fallback : (string) $fallback;
+    }
+
+    protected function getFormattedCellValue(Row $row, string $key): ?string
+    {
+        $this->buildHeadingColumnMap($row);
+        $column = $this->headingColumnMap[$key] ?? null;
+        if (!$column) {
+            return null;
+        }
+
+        $worksheet = $row->getDelegate()->getWorksheet();
+        $cell = $worksheet->getCell($column.$row->getIndex());
+        if (!$cell) {
+            return null;
+        }
+
+        $value = $cell->getFormattedValue();
+        if ($value === null) {
+            return null;
+        }
+
+        return (string) $value;
+    }
+
+    protected function buildHeadingColumnMap(Row $row): void
+    {
+        if (!empty($this->headingColumnMap)) {
+            return;
+        }
+
+        $worksheet = $row->getDelegate()->getWorksheet();
+        $headingRowIndex = 1;
+        $headerRow = $worksheet->getRowIterator($headingRowIndex, $headingRowIndex)->current();
+        if (!$headerRow) {
+            return;
+        }
+
+        $cellIterator = $headerRow->getCellIterator();
+        $cellIterator->setIterateOnlyExistingCells(true);
+
+        $headings = [];
+        $columns = [];
+        foreach ($cellIterator as $cell) {
+            $headings[] = (string) $cell->getValue();
+            $columns[] = $cell->getColumn();
+        }
+
+        $formattedHeadings = HeadingRowFormatter::format($headings);
+        foreach ($formattedHeadings as $idx => $heading) {
+            if ($heading === '') {
+                continue;
+            }
+            if (!isset($columns[$idx])) {
+                continue;
+            }
+            if (!isset($this->headingColumnMap[$heading])) {
+                $this->headingColumnMap[$heading] = $columns[$idx];
+            }
+        }
+    }
+
+    public function registerEvents(): array
+    {
+        return [
+            AfterImport::class => function () {
+                if ($this->skipped > 0 || !empty($this->errors) || !empty($this->errorRows)) {
+                    return;
+                }
+                if (empty($this->pendingRows)) {
+                    return;
+                }
+
+                foreach ($this->pendingRows as $payload) {
+                    JurnalUmum::create($payload);
+                }
+                $this->created = count($this->pendingRows);
+            },
+        ];
     }
 }
