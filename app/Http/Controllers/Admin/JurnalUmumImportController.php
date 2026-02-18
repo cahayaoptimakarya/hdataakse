@@ -60,4 +60,17 @@ class JurnalUmumImportController extends Controller
             return response()->json(['message' => 'Gagal import: '.$e->getMessage()], 500);
         }
     }
+
+    public function destroyAll()
+    {
+        try {
+            DB::beginTransaction();
+            DB::table('jurnal_umum')->truncate();
+            DB::commit();
+            return response()->json(['message' => 'Semua data jurnal umum berhasil dihapus']);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'Gagal menghapus data: '.$e->getMessage()], 500);
+        }
+    }
 }

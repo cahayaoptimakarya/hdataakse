@@ -40,6 +40,9 @@
                         <span class="spinner-border spinner-border-sm align-middle ms-2"></span>
                     </span>
                 </button>
+                <button type="button" class="btn btn-light-danger" id="btn_jurnal_clear">
+                    Hapus Semua
+                </button>
             </div>
         </form>
 
@@ -74,6 +77,7 @@
 @push('scripts')
 <script>
     const importUrl = '{{ route('admin.keuangan.jurnal-umum.store') }}';
+    const destroyUrl = '{{ route('admin.keuangan.jurnal-umum.destroy') }}';
     const csrfToken = '{{ csrf_token() }}';
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -87,6 +91,7 @@
         const errorsEl = document.getElementById('import_errors');
         const errorFileWrapper = document.getElementById('error_file_wrapper');
         const errorFileLink = document.getElementById('error_file_link');
+        const clearBtn = document.getElementById('btn_jurnal_clear');
 
         const setLoading = (loading) => {
             if (!submitBtn) return;
@@ -178,6 +183,50 @@
                 }
             } finally {
                 setLoading(false);
+            }
+        });
+
+        clearBtn?.addEventListener('click', async () => {
+            const doDelete = async () => {
+                const res = await fetch(destroyUrl, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json',
+                    },
+                });
+                const text = await res.text();
+                let json;
+                try { json = JSON.parse(text); } catch (err) {
+                    throw new Error('Respons server tidak valid.');
+                }
+                if (!res.ok) {
+                    throw new Error(json.message || 'Gagal menghapus data.');
+                }
+                return json;
+            };
+
+            if (typeof Swal !== 'undefined') {
+                const confirm = await Swal.fire({
+                    title: 'Hapus semua jurnal?',
+                    text: 'Tindakan ini tidak dapat dibatalkan.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Hapus',
+                    cancelButtonText: 'Batal',
+                });
+                if (!confirm.isConfirmed) return;
+            }
+
+            try {
+                await doDelete();
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire('Berhasil', 'Semua data jurnal umum berhasil dihapus.', 'success');
+                }
+            } catch (err) {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire('Error', err.message || 'Gagal menghapus data.', 'error');
+                }
             }
         });
     });
