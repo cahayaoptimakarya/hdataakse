@@ -133,5 +133,6 @@ Route::middleware(['auth', 'verified', 'menu.permission'])->prefix('admin')->as(
         // Laporan
         Route::get('/laporan', [LaporanJurnalUmumController::class, 'index'])->name('laporan.index');
         Route::get('/laporan/export', [LaporanJurnalUmumController::class, 'export'])->name('laporan.export');
+        Route::get('/laporan/sub-akun/{subAkunBiaya}/jurnal', [LaporanJurnalUmumController::class, 'subAkunJurnal'])->name('laporan.sub-akun-jurnal');
     });
 });

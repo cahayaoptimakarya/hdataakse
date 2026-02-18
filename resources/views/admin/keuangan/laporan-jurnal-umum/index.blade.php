@@ -84,7 +84,13 @@
                             </tr>
                             @foreach($akunGroup['sub_groups'] as $sub)
                                 <tr>
-                                    <td class="ps-6 fw-bold">{{ $sub['sub_akun'] }}</td>
+                                    <td class="ps-6 fw-bold">
+                                        <button type="button" class="btn btn-link p-0 fw-bold sub-akun-link"
+                                            data-sub-akun-id="{{ $sub['sub_akun_id'] }}"
+                                            data-sub-akun-name="{{ $sub['sub_akun'] }}">
+                                            {{ $sub['sub_akun'] }}
+                                        </button>
+                                    </td>
                                     @foreach($sub['cells'] as $cell)
                                         <td class="text-end">{{ $formatRupiah($cell['kredit']) }}</td>
                                     @endforeach
@@ -186,6 +192,8 @@
     .budget-cell:hover .budget-edit-btn { opacity: 1; }
     .grand-budget-cell .grand-budget-edit-btn { opacity: 0; transition: opacity .15s ease-in-out; }
     .grand-budget-cell:hover .grand-budget-edit-btn { opacity: 1; }
+    .sub-akun-link { text-decoration: none; }
+    .sub-akun-link:hover { text-decoration: underline; }
 </style>
 @endpush
 
@@ -256,6 +264,52 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
                 <button type="button" class="btn btn-primary" id="grand_budget_modal_save">Simpan</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Sub Akun Jurnal -->
+<div class="modal fade" id="sub_akun_modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered mw-1000px">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="fw-bolder" id="sub_akun_modal_title">Detail Jurnal</h2>
+                <div class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal">
+                    <span class="svg-icon svg-icon-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <rect opacity="0.5" x="6" y="17.3137" width="16" height="2" rx="1" transform="rotate(-45 6 17.3137)" fill="black" />
+                            <rect x="7.41422" y="6" width="16" height="2" rx="1" transform="rotate(45 7.41422 6)" fill="black" />
+                        </svg>
+                    </span>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table align-middle table-row-dashed fs-6 gy-5 mb-0">
+                        <thead>
+                            <tr class="text-start text-gray-400 fw-bolder fs-7 text-uppercase gs-0">
+                                <th>Tanggal</th>
+                                <th>Divisi</th>
+                                <th>Toko</th>
+                                <th>Keterangan</th>
+                                <th class="text-end">Debet</th>
+                                <th class="text-end">Kredit</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sub_akun_modal_body"></tbody>
+                        <tfoot>
+                            <tr class="fw-bolder">
+                                <td colspan="4" class="text-end">Total</td>
+                                <td class="text-end" id="sub_akun_total_debet">0</td>
+                                <td class="text-end" id="sub_akun_total_kredit">0</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Tutup</button>
             </div>
         </div>
     </div>
@@ -410,6 +464,15 @@
         const modalSave = document.getElementById('budget_modal_save');
         const modal = modalEl && window.bootstrap ? new bootstrap.Modal(modalEl) : null;
 
+        const subAkunModalEl = document.getElementById('sub_akun_modal');
+        const subAkunModalBody = document.getElementById('sub_akun_modal_body');
+        const subAkunModalTitle = document.getElementById('sub_akun_modal_title');
+        const subAkunTotalDebet = document.getElementById('sub_akun_total_debet');
+        const subAkunTotalKredit = document.getElementById('sub_akun_total_kredit');
+        const subAkunModal = subAkunModalEl && window.bootstrap ? new bootstrap.Modal(subAkunModalEl) : null;
+
+        const subAkunUrlTemplate = '{{ route('admin.keuangan.laporan.sub-akun-jurnal', ':id') }}';
+
         const grandModalEl = document.getElementById('grand_budget_modal');
         const grandModalBody = document.getElementById('grand_budget_modal_body');
         const grandModalTitle = document.getElementById('grand_budget_modal_title');
@@ -492,6 +555,66 @@
                 const akunId = btn.dataset.akun;
                 const divisionId = btn.dataset.division;
                 if (akunId && divisionId) openBudgetModal(akunId, divisionId);
+            });
+        });
+
+        document.querySelectorAll('.sub-akun-link').forEach((btn) => {
+            btn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                const subAkunId = btn.dataset.subAkunId;
+                const subAkunName = btn.dataset.subAkunName || '';
+                if (!subAkunId || !subAkunModalEl || !subAkunModalBody) return;
+
+                const query = window.location.search || '';
+                const url = subAkunUrlTemplate.replace(':id', subAkunId) + query;
+
+                subAkunModalTitle.textContent = `Detail Jurnal - ${subAkunName}`;
+                subAkunModalBody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center text-muted">Loading...</td>
+                    </tr>
+                `;
+                if (subAkunTotalDebet) subAkunTotalDebet.textContent = '0';
+                if (subAkunTotalKredit) subAkunTotalKredit.textContent = '0';
+                subAkunModal?.show();
+
+                try {
+                    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                    const json = await res.json();
+                    if (!res.ok) throw new Error(json.message || 'Gagal mengambil data');
+
+                    const rows = Array.isArray(json.rows) ? json.rows : [];
+                    if (!rows.length) {
+                        subAkunModalBody.innerHTML = `
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">Tidak ada data.</td>
+                            </tr>
+                        `;
+                    } else {
+                        subAkunModalBody.innerHTML = '';
+                        rows.forEach((row) => {
+                            const tr = document.createElement('tr');
+                            tr.innerHTML = `
+                                <td>${row.tanggal ?? '-'}</td>
+                                <td>${row.division ?? '-'}</td>
+                                <td>${row.toko ?? '-'}</td>
+                                <td>${row.keterangan ?? '-'}</td>
+                                <td class="text-end">${formatRupiah(row.debet ?? 0)}</td>
+                                <td class="text-end">${formatRupiah(row.kredit ?? 0)}</td>
+                            `;
+                            subAkunModalBody.appendChild(tr);
+                        });
+                    }
+
+                    if (subAkunTotalDebet) subAkunTotalDebet.textContent = formatRupiah(json.total_debet ?? 0);
+                    if (subAkunTotalKredit) subAkunTotalKredit.textContent = formatRupiah(json.total_kredit ?? 0);
+                } catch (err) {
+                    subAkunModalBody.innerHTML = `
+                        <tr>
+                            <td colspan="6" class="text-center text-danger">Gagal memuat data.</td>
+                        </tr>
+                    `;
+                }
             });
         });
 

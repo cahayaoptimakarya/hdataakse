@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Exports\LaporanExport;
+use App\Models\SubAkunBiaya;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
@@ -52,6 +53,56 @@ class LaporanJurnalUmumController extends Controller
 
         $filename = 'laporan-'.now()->format('Ymd_His').'.xlsx';
         return Excel::download($export, $filename);
+    }
+
+    public function subAkunJurnal(Request $request, SubAkunBiaya $subAkunBiaya)
+    {
+        $selectedDivisionIds = $request->input('division_ids', []);
+        if (!is_array($selectedDivisionIds)) {
+            $selectedDivisionIds = [$selectedDivisionIds];
+        }
+        $selectedDivisionIds = collect($selectedDivisionIds)
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        $query = DB::table('jurnal_umum as ju')
+            ->join('sub_divisions as sd', 'sd.id', '=', 'ju.sub_divisi_id')
+            ->join('divisions as d', 'd.id', '=', 'sd.division_id')
+            ->join('sub_akun_biaya as sab', 'sab.id', '=', 'ju.sub_akun_biaya_id')
+            ->join('akun_biaya as ab', 'ab.id', '=', 'sab.akun_biaya_id')
+            ->where('ju.sub_akun_biaya_id', $subAkunBiaya->id)
+            ->select(
+                'ju.id',
+                'ju.tanggal',
+                'ju.keterangan',
+                'sd.name as toko',
+                'd.name as division',
+                'ju.debet',
+                'ju.kredit',
+                'ab.name as akun',
+                'sab.name as sub_akun'
+            )
+            ->orderBy('ju.tanggal', 'desc')
+            ->orderBy('ju.id', 'desc');
+
+        if (!empty($selectedDivisionIds)) {
+            $query->whereIn('d.id', $selectedDivisionIds);
+        }
+
+        $rows = $query->get();
+
+        $subAkunBiaya->loadMissing('akunBiaya');
+
+        return response()->json([
+            'akun' => $subAkunBiaya->akunBiaya?->name,
+            'sub_akun' => $subAkunBiaya->name,
+            'rows' => $rows,
+            'total_debet' => (float) $rows->sum('debet'),
+            'total_kredit' => (float) $rows->sum('kredit'),
+        ]);
     }
 
     private function buildReportData(Request $request): array
@@ -149,6 +200,7 @@ class LaporanJurnalUmumController extends Controller
                         });
 
                         return [
+                            'sub_akun_id' => (int) $subItems->first()->sub_akun_id,
                             'sub_akun' => $subItems->first()->sub_akun,
                             'cells' => $cells,
                         ];
