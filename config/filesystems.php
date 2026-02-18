@@ -1,5 +1,18 @@
 <?php
 
+$publicDiskRoot = env('PUBLIC_DISK_ROOT');
+if ($publicDiskRoot) {
+    $isAbsolute = str_starts_with($publicDiskRoot, DIRECTORY_SEPARATOR)
+        || preg_match('/^[A-Za-z]:\\\\/', $publicDiskRoot) === 1;
+    if (!$isAbsolute) {
+        $publicDiskRoot = base_path($publicDiskRoot);
+    }
+} else {
+    $publicDiskRoot = storage_path('app/public');
+}
+
+$publicDiskUrl = env('PUBLIC_DISK_URL', env('APP_URL').'/storage');
+
 return [
 
     /*
@@ -40,8 +53,8 @@ return [
 
         'public' => [
             'driver' => 'local',
-            'root' => storage_path('app/public'),
-            'url' => env('APP_URL').'/storage',
+            'root' => $publicDiskRoot,
+            'url' => $publicDiskUrl,
             'visibility' => 'public',
             'throw' => false,
             'report' => false,
