@@ -13,7 +13,7 @@
     <div class="card-body py-6">
         @php
             $formatRupiah = function ($value) {
-                return 'Rp '.number_format((float) $value, 2, ',', '.');
+                return number_format((float) $value, 2, ',', '.');
             };
         @endphp
 
@@ -264,7 +264,7 @@
         const formatRupiah = (value) => {
             const num = Number(value ?? 0);
             const safe = Number.isFinite(num) ? num : 0;
-            return `Rp ${new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(safe)}`;
+            return new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(safe);
         };
 
         const toNumber = (value) => {
