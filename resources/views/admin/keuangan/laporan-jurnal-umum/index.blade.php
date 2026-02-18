@@ -92,22 +92,82 @@
                             @endforeach
                             <tr class="table-light">
                                 <td class="fw-bold">Total {{ $akunGroup['akun'] }}</td>
-                                @foreach($akunGroup['totals_by_division'] as $cell)
-                                    <td class="text-end fw-bold">{{ $formatRupiah($cell['kredit']) }}</td>
+                                @foreach($divisions as $div)
+                                    @php
+                                        $totals = $akunGroup['totals_by_division'][$div['id']] ?? ['kredit' => 0];
+                                    @endphp
+                                    <td class="text-end fw-bold">{{ $formatRupiah($totals['kredit']) }}</td>
                                 @endforeach
-                                <td class="text-end fw-bold">
-                                    {{ $formatRupiah($akunGroup['totals_by_division']->sum('kredit')) }}
-                                </td>
+                                @php
+                                    $totalAkun = collect($akunGroup['totals_by_division'])->sum('kredit');
+                                @endphp
+                                <td class="text-end fw-bold">{{ $formatRupiah($totalAkun) }}</td>
+                            </tr>
+                            <tr class="table-warning budget-row" data-akun="{{ $akunGroup['akun_id'] }}" data-akun-name="{{ $akunGroup['akun'] }}">
+                                <td class="fw-bold">Budget</td>
+                                @foreach($divisions as $div)
+                                    @php
+                                        $budgetVal = $budget_map[$akunGroup['akun_id']][$div['id']] ?? null;
+                                        $actualVal = $akunGroup['totals_by_division'][$div['id']]['kredit'] ?? 0;
+                                    @endphp
+                                    <td
+                                        class="text-end budget-cell"
+                                        data-akun="{{ $akunGroup['akun_id'] }}"
+                                        data-division="{{ $div['id'] }}"
+                                        data-division-name="{{ $div['name'] }}"
+                                        data-actual="{{ $actualVal }}"
+                                        data-budget="{{ $budgetVal !== null ? $budgetVal : '' }}"
+                                    >
+                                        <div class="d-flex justify-content-end align-items-center gap-2">
+                                            <span class="budget-value">-</span>
+                                            <button type="button" class="btn btn-icon btn-sm btn-light budget-edit-btn" data-akun="{{ $akunGroup['akun_id'] }}" data-division="{{ $div['id'] }}" title="Edit budget">
+                                                <i class="fa-solid fa-pen"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                @endforeach
+                                <td class="text-end fw-bold budget-total" data-akun="{{ $akunGroup['akun_id'] }}">-</td>
+                            </tr>
+                            <tr class="table-light selisih-row" data-akun="{{ $akunGroup['akun_id'] }}">
+                                <td class="fw-bold">Selisih</td>
+                                @foreach($divisions as $div)
+                                    <td class="text-end selisih-cell" data-akun="{{ $akunGroup['akun_id'] }}" data-division="{{ $div['id'] }}">-</td>
+                                @endforeach
+                                <td class="text-end fw-bold selisih-total" data-akun="{{ $akunGroup['akun_id'] }}">-</td>
                             </tr>
                         @endforeach
                     </tbody>
                     <tfoot>
                         <tr class="fw-bolder">
                             <td>Grand Total</td>
-                            @foreach($grand_by_division as $cell)
-                                <td class="text-end">{{ $formatRupiah($cell['kredit']) }}</td>
+                            @foreach($divisions as $div)
+                                @php
+                                    $grand = $grand_by_division[$div['id']] ?? ['kredit' => 0];
+                                @endphp
+                                <td class="text-end">{{ $formatRupiah($grand['kredit']) }}</td>
                             @endforeach
                             <td class="text-end">{{ $formatRupiah($grand_total_kredit) }}</td>
+                        </tr>
+                        <tr class="table-warning fw-bolder">
+                            <td>Grand Budget</td>
+                            @foreach($divisions as $div)
+                                <td class="text-end grand-budget-cell" data-division="{{ $div['id'] }}" data-division-name="{{ $div['name'] }}" data-budget="">
+                                    <div class="d-flex justify-content-end align-items-center gap-2">
+                                        <span class="grand-budget-value">-</span>
+                                        <button type="button" class="btn btn-icon btn-sm btn-light grand-budget-edit-btn" data-division="{{ $div['id'] }}" title="Edit grand budget">
+                                            <i class="fa-solid fa-pen"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            @endforeach
+                            <td class="text-end fw-bolder grand-budget-total">-</td>
+                        </tr>
+                        <tr class="table-light fw-bolder">
+                            <td>Grand Selisih</td>
+                            @foreach($divisions as $div)
+                                <td class="text-end grand-selisih-cell" data-division="{{ $div['id'] }}">-</td>
+                            @endforeach
+                            <td class="text-end grand-selisih-total">-</td>
                         </tr>
                     </tfoot>
                 </table>
@@ -116,3 +176,357 @@
     </div>
 </div>
 @endsection
+
+@push('styles')
+<style>
+    .budget-cell .budget-edit-btn { opacity: 0; transition: opacity .15s ease-in-out; }
+    .budget-cell:hover .budget-edit-btn { opacity: 1; }
+    .grand-budget-cell .grand-budget-edit-btn { opacity: 0; transition: opacity .15s ease-in-out; }
+    .grand-budget-cell:hover .grand-budget-edit-btn { opacity: 1; }
+</style>
+@endpush
+
+<!-- Modal Budget -->
+<div class="modal fade" id="budget_modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered mw-650px">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="fw-bolder" id="budget_modal_title">Edit Budget</h2>
+                <div class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal">
+                    <span class="svg-icon svg-icon-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <rect opacity="0.5" x="6" y="17.3137" width="16" height="2" rx="1" transform="rotate(-45 6 17.3137)" fill="black" />
+                            <rect x="7.41422" y="6" width="16" height="2" rx="1" transform="rotate(45 7.41422 6)" fill="black" />
+                        </svg>
+                    </span>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table align-middle table-row-dashed fs-6 gy-5 mb-0">
+                        <thead>
+                            <tr class="text-start text-gray-400 fw-bolder fs-7 text-uppercase gs-0">
+                                <th>Divisi</th>
+                                <th class="text-end">Budget</th>
+                            </tr>
+                        </thead>
+                        <tbody id="budget_modal_body"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
+                <button type="button" class="btn btn-primary" id="budget_modal_save">Simpan</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Grand Budget -->
+<div class="modal fade" id="grand_budget_modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered mw-650px">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="fw-bolder" id="grand_budget_modal_title">Edit Grand Budget</h2>
+                <div class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal">
+                    <span class="svg-icon svg-icon-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <rect opacity="0.5" x="6" y="17.3137" width="16" height="2" rx="1" transform="rotate(-45 6 17.3137)" fill="black" />
+                            <rect x="7.41422" y="6" width="16" height="2" rx="1" transform="rotate(45 7.41422 6)" fill="black" />
+                        </svg>
+                    </span>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table align-middle table-row-dashed fs-6 gy-5 mb-0">
+                        <thead>
+                            <tr class="text-start text-gray-400 fw-bolder fs-7 text-uppercase gs-0">
+                                <th>Divisi</th>
+                                <th class="text-end">Budget</th>
+                            </tr>
+                        </thead>
+                        <tbody id="grand_budget_modal_body"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
+                <button type="button" class="btn btn-primary" id="grand_budget_modal_save">Simpan</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const formatRupiah = (value) => {
+            const num = Number(value ?? 0);
+            const safe = Number.isFinite(num) ? num : 0;
+            return `Rp ${new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(safe)}`;
+        };
+
+        const toNumber = (value) => {
+            if (value === null || value === undefined) return 0;
+            let cleaned = String(value).replace(/[^0-9.,-]/g, '');
+            if (cleaned === '') return 0;
+            const hasComma = cleaned.includes(',');
+            const hasDot = cleaned.includes('.');
+            if (hasComma && hasDot) {
+                if (cleaned.lastIndexOf(',') > cleaned.lastIndexOf('.')) {
+                    cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+                } else {
+                    cleaned = cleaned.replace(/,/g, '');
+                }
+            } else if (hasComma && !hasDot) {
+                cleaned = cleaned.replace(',', '.');
+            }
+            const num = Number(cleaned);
+            return Number.isFinite(num) ? num : 0;
+        };
+
+        const initBudgetMask = (input) => {
+            if (!window.Inputmask) return;
+            Inputmask({
+                alias: 'numeric',
+                groupSeparator: '.',
+                radixPoint: ',',
+                digits: 2,
+                digitsOptional: false,
+                autoGroup: true,
+                rightAlign: true,
+                prefix: 'Rp ',
+                allowMinus: false,
+                placeholder: '0',
+                clearMaskOnLostFocus: false,
+            }).mask(input);
+        };
+
+        const getMaskedValue = (input) => {
+            if (input?.inputmask) {
+                return input.inputmask.unmaskedvalue();
+            }
+            return input.value ?? '';
+        };
+
+        const parseNumber = (value) => {
+            const num = Number(value);
+            return Number.isFinite(num) ? num : 0;
+        };
+
+        const updateGrand = () => {
+            const divisionIds = new Set();
+            document.querySelectorAll('.grand-budget-cell').forEach((cell) => {
+                if (cell.dataset.division) divisionIds.add(cell.dataset.division);
+            });
+
+            let grandBudgetTotal = 0;
+            let grandActualTotal = 0;
+
+            divisionIds.forEach((divisionId) => {
+                let actualSum = 0;
+                document.querySelectorAll(`.budget-cell[data-division="${divisionId}"]`).forEach((cell) => {
+                    actualSum += parseNumber(cell.dataset.actual);
+                });
+
+                const budgetCell = document.querySelector(`.grand-budget-cell[data-division="${divisionId}"]`);
+                const rawBudget = budgetCell?.dataset.budget;
+                const hasBudget = rawBudget !== '' && rawBudget !== undefined;
+                const budgetVal = hasBudget ? parseNumber(rawBudget) : 0;
+
+                const valueEl = budgetCell?.querySelector('.grand-budget-value');
+                if (valueEl) {
+                    valueEl.textContent = hasBudget ? formatRupiah(budgetVal) : '-';
+                }
+
+                const diffEl = document.querySelector(`.grand-selisih-cell[data-division="${divisionId}"]`);
+                if (diffEl) diffEl.textContent = formatRupiah(budgetVal - actualSum);
+
+                grandBudgetTotal += budgetVal;
+                grandActualTotal += actualSum;
+            });
+
+            const budgetTotalEl = document.querySelector('.grand-budget-total');
+            if (budgetTotalEl) budgetTotalEl.textContent = formatRupiah(grandBudgetTotal);
+
+            const diffTotalEl = document.querySelector('.grand-selisih-total');
+            if (diffTotalEl) diffTotalEl.textContent = formatRupiah(grandBudgetTotal - grandActualTotal);
+        };
+
+        const updateAkun = (akunId) => {
+            let budgetSum = 0;
+            let diffSum = 0;
+
+            const cells = document.querySelectorAll(`.budget-cell[data-akun="${akunId}"]`);
+            cells.forEach((cell) => {
+                const rawBudget = cell.dataset.budget;
+                const hasBudget = rawBudget !== '' && rawBudget !== undefined;
+                const budget = hasBudget ? parseNumber(rawBudget) : 0;
+                const actual = parseNumber(cell.dataset.actual);
+                const diff = budget - actual;
+
+                budgetSum += budget;
+                diffSum += diff;
+
+                const valueEl = cell.querySelector('.budget-value');
+                if (valueEl) {
+                    valueEl.textContent = hasBudget ? formatRupiah(budget) : '-';
+                }
+
+                const diffEl = document.querySelector(`.selisih-cell[data-akun="${akunId}"][data-division="${cell.dataset.division}"]`);
+                if (diffEl) {
+                    diffEl.textContent = formatRupiah(diff);
+                }
+            });
+
+            const totalEl = document.querySelector(`.budget-total[data-akun="${akunId}"]`);
+            if (totalEl) {
+                totalEl.textContent = formatRupiah(budgetSum);
+            }
+
+            const diffTotalEl = document.querySelector(`.selisih-total[data-akun="${akunId}"]`);
+            if (diffTotalEl) {
+                diffTotalEl.textContent = formatRupiah(diffSum);
+            }
+
+            updateGrand();
+        };
+
+        const akunIds = new Set();
+        document.querySelectorAll('.budget-cell').forEach((cell) => {
+            const akunId = cell.dataset.akun;
+            if (akunId) akunIds.add(akunId);
+        });
+        akunIds.forEach((id) => updateAkun(id));
+        updateGrand();
+
+        const modalEl = document.getElementById('budget_modal');
+        const modalBody = document.getElementById('budget_modal_body');
+        const modalTitle = document.getElementById('budget_modal_title');
+        const modalSave = document.getElementById('budget_modal_save');
+        const modal = modalEl && window.bootstrap ? new bootstrap.Modal(modalEl) : null;
+
+        const grandModalEl = document.getElementById('grand_budget_modal');
+        const grandModalBody = document.getElementById('grand_budget_modal_body');
+        const grandModalTitle = document.getElementById('grand_budget_modal_title');
+        const grandModalSave = document.getElementById('grand_budget_modal_save');
+        const grandModal = grandModalEl && window.bootstrap ? new bootstrap.Modal(grandModalEl) : null;
+
+        const openBudgetModal = (akunId, divisionId) => {
+            if (!modalEl || !modalBody) return;
+            const row = document.querySelector(`.budget-row[data-akun="${akunId}"]`);
+            const akunName = row?.dataset.akunName || 'Budget';
+            const cell = document.querySelector(`.budget-cell[data-akun="${akunId}"][data-division="${divisionId}"]`);
+            const divisionName = cell?.dataset.divisionName || '-';
+            modalTitle.textContent = `Edit Budget - ${akunName} (${divisionName})`;
+            modalBody.innerHTML = '';
+
+            if (cell) {
+                const rawBudgetVal = cell.dataset.budget ?? '';
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${divisionName}</td>
+                    <td class="text-end">
+                        <input type="text" inputmode="numeric" class="form-control form-control-sm text-end budget-input-mask" data-division="${divisionId}" placeholder="Rp 0,00">
+                    </td>
+                `;
+                modalBody.appendChild(tr);
+                const input = tr.querySelector('input');
+                if (input) {
+                    initBudgetMask(input);
+                    if (rawBudgetVal !== '') {
+                        if (input.inputmask?.setValue) {
+                            input.inputmask.setValue(rawBudgetVal);
+                        } else {
+                            input.value = rawBudgetVal;
+                        }
+                    }
+                }
+            }
+
+            modalEl.dataset.akun = akunId;
+            modalEl.dataset.division = divisionId;
+            modal?.show();
+        };
+
+        const openGrandBudgetModal = (divisionId) => {
+            if (!grandModalEl || !grandModalBody) return;
+            const cell = document.querySelector(`.grand-budget-cell[data-division="${divisionId}"]`);
+            const divisionName = cell?.dataset.divisionName || '-';
+            const rawBudgetVal = cell?.dataset.budget ?? '';
+
+            grandModalTitle.textContent = `Edit Grand Budget (${divisionName})`;
+            grandModalBody.innerHTML = '';
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${divisionName}</td>
+                <td class="text-end">
+                    <input type="text" inputmode="numeric" class="form-control form-control-sm text-end grand-budget-input-mask" data-division="${divisionId}" placeholder="Rp 0,00">
+                </td>
+            `;
+            grandModalBody.appendChild(tr);
+            const input = tr.querySelector('input');
+            if (input) {
+                initBudgetMask(input);
+                if (rawBudgetVal !== '') {
+                    if (input.inputmask?.setValue) {
+                        input.inputmask.setValue(rawBudgetVal);
+                    } else {
+                        input.value = rawBudgetVal;
+                    }
+                }
+            }
+
+            grandModalEl.dataset.division = divisionId;
+            grandModal?.show();
+        };
+
+        document.querySelectorAll('.budget-edit-btn').forEach((btn) => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const akunId = btn.dataset.akun;
+                const divisionId = btn.dataset.division;
+                if (akunId && divisionId) openBudgetModal(akunId, divisionId);
+            });
+        });
+
+        document.querySelectorAll('.grand-budget-edit-btn').forEach((btn) => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const divisionId = btn.dataset.division;
+                if (divisionId) openGrandBudgetModal(divisionId);
+            });
+        });
+
+        modalSave?.addEventListener('click', () => {
+            const akunId = modalEl?.dataset.akun;
+            const divisionId = modalEl?.dataset.division;
+            if (!akunId || !divisionId) return;
+            modalBody?.querySelectorAll('input[data-division]').forEach((input) => {
+                const value = getMaskedValue(input);
+                const cell = document.querySelector(`.budget-cell[data-akun="${akunId}"][data-division="${divisionId}"]`);
+                if (cell) {
+                    cell.dataset.budget = value !== '' ? toNumber(value) : '';
+                }
+            });
+            updateAkun(akunId);
+            modal?.hide();
+        });
+
+        grandModalSave?.addEventListener('click', () => {
+            const divisionId = grandModalEl?.dataset.division;
+            if (!divisionId) return;
+            const input = grandModalBody?.querySelector('input[data-division]');
+            const value = input ? getMaskedValue(input) : '';
+            const cell = document.querySelector(`.grand-budget-cell[data-division="${divisionId}"]`);
+            if (cell) {
+                cell.dataset.budget = value !== '' ? toNumber(value) : '';
+            }
+            updateGrand();
+            grandModal?.hide();
+        });
+    });
+</script>
+@endpush

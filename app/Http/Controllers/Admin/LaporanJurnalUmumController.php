@@ -115,14 +115,17 @@ class LaporanJurnalUmumController extends Controller
                     })
                     ->values();
 
-                $totalsByDivision = $divisions->map(function ($div) use ($akunItems) {
+                $totalsByDivision = $divisions->mapWithKeys(function ($div) use ($akunItems) {
                     return [
-                        'debet' => (float) $akunItems->where('division_id', $div['id'])->sum('total_debet'),
-                        'kredit' => (float) $akunItems->where('division_id', $div['id'])->sum('total_kredit'),
+                        $div['id'] => [
+                            'debet' => (float) $akunItems->where('division_id', $div['id'])->sum('total_debet'),
+                            'kredit' => (float) $akunItems->where('division_id', $div['id'])->sum('total_kredit'),
+                        ],
                     ];
                 });
 
                 return [
+                    'akun_id' => (int) $akunItems->first()->akun_id,
                     'akun' => $akunItems->first()->akun,
                     'sub_groups' => $subGroups,
                     'totals_by_division' => $totalsByDivision,
@@ -130,12 +133,30 @@ class LaporanJurnalUmumController extends Controller
             })
             ->values();
 
-        $grandByDivision = $divisions->map(function ($div) use ($rows) {
+        $grandByDivision = $divisions->mapWithKeys(function ($div) use ($rows) {
             return [
-                'debet' => (float) $rows->where('division_id', $div['id'])->sum('total_debet'),
-                'kredit' => (float) $rows->where('division_id', $div['id'])->sum('total_kredit'),
+                $div['id'] => [
+                    'debet' => (float) $rows->where('division_id', $div['id'])->sum('total_debet'),
+                    'kredit' => (float) $rows->where('division_id', $div['id'])->sum('total_kredit'),
+                ],
             ];
         });
+
+        $divisionIds = $divisions->pluck('id')->all();
+        $akunIds = $akunGroups->pluck('akun_id')->all();
+
+        $budgetRows = [];
+        if (!empty($divisionIds) && !empty($akunIds)) {
+            $budgetRows = DB::table('budgets')
+                ->whereIn('division_id', $divisionIds)
+                ->whereIn('akun_biaya_id', $akunIds)
+                ->get(['division_id', 'akun_biaya_id', 'amount']);
+        }
+
+        $budgetMap = [];
+        foreach ($budgetRows as $row) {
+            $budgetMap[$row->akun_biaya_id][$row->division_id] = (float) $row->amount;
+        }
 
         return view('admin.keuangan.laporan-jurnal-umum.index', [
             'divisions' => $divisions,
@@ -147,6 +168,7 @@ class LaporanJurnalUmumController extends Controller
             'selected_division_ids' => $selectedDivisionIds,
             'akun_options' => $akunOptions,
             'selected_akun_ids' => $selectedAkunIds,
+            'budget_map' => $budgetMap,
         ]);
     }
 }
