@@ -65,9 +65,22 @@ class JurnalUmumImportController extends Controller
     {
         try {
             DB::beginTransaction();
+            $count = DB::table('jurnal_umum')->count();
+            if ($count === 0) {
+                DB::rollBack();
+                return response()->json([
+                    'message' => 'Data jurnal umum sudah kosong.',
+                    'deleted' => 0,
+                    'was_empty' => true,
+                ]);
+            }
             DB::table('jurnal_umum')->truncate();
             DB::commit();
-            return response()->json(['message' => 'Semua data jurnal umum berhasil dihapus']);
+            return response()->json([
+                'message' => 'Semua data jurnal umum berhasil dihapus.',
+                'deleted' => $count,
+                'was_empty' => false,
+            ]);
         } catch (\Throwable $e) {
             DB::rollBack();
             return response()->json(['message' => 'Gagal menghapus data: '.$e->getMessage()], 500);

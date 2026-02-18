@@ -219,9 +219,17 @@
             }
 
             try {
-                await doDelete();
+                const json = await doDelete();
                 if (typeof Swal !== 'undefined') {
-                    Swal.fire('Berhasil', 'Semua data jurnal umum berhasil dihapus.', 'success');
+                    if (json?.was_empty) {
+                        Swal.fire('Info', json.message || 'Data jurnal umum sudah kosong.', 'info');
+                    } else {
+                        const deleted = json?.deleted ?? 0;
+                        const msg = deleted > 0
+                            ? `Berhasil menghapus ${deleted} data jurnal umum.`
+                            : (json.message || 'Semua data jurnal umum berhasil dihapus.');
+                        Swal.fire('Berhasil', msg, 'success');
+                    }
                 }
             } catch (err) {
                 if (typeof Swal !== 'undefined') {
