@@ -130,7 +130,8 @@ Route::middleware(['auth', 'verified', 'menu.permission'])->prefix('admin')->as(
         Route::get('/jurnal-umum', [JurnalUmumImportController::class, 'index'])->name('jurnal-umum.index');
         Route::post('/jurnal-umum', [JurnalUmumImportController::class, 'store'])->name('jurnal-umum.store');
 
-        // Laporan Jurnal Umum
+        // Laporan
         Route::get('/laporan', [LaporanJurnalUmumController::class, 'index'])->name('laporan.index');
+        Route::get('/laporan/export', [LaporanJurnalUmumController::class, 'export'])->name('laporan.export');
     });
 });

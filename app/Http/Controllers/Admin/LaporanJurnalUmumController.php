@@ -3,12 +3,58 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Exports\LaporanExport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
 
 class LaporanJurnalUmumController extends Controller
 {
     public function index(Request $request)
+    {
+        $report = $this->buildReportData($request);
+
+        $divisionOptions = DB::table('divisions')
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        $akunOptions = DB::table('akun_biaya')
+            ->where('id', '!=', 1)
+            ->whereRaw('LOWER(name) != ?', ['kas'])
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        return view('admin.keuangan.laporan-jurnal-umum.index', [
+            'divisions' => $report['divisions'],
+            'akun_groups' => $report['akun_groups'],
+            'grand_by_division' => $report['grand_by_division'],
+            'grand_total_debet' => $report['grand_total_debet'],
+            'grand_total_kredit' => $report['grand_total_kredit'],
+            'division_options' => $divisionOptions,
+            'selected_division_ids' => $report['selected_division_ids'],
+            'akun_options' => $akunOptions,
+            'selected_akun_ids' => $report['selected_akun_ids'],
+            'budget_map' => $report['budget_map'],
+        ]);
+    }
+
+    public function export(Request $request)
+    {
+        $report = $this->buildReportData($request);
+
+        $export = new LaporanExport([
+            'divisions' => $report['divisions'],
+            'akun_groups' => $report['akun_groups'],
+            'grand_by_division' => $report['grand_by_division'],
+            'grand_total_kredit' => $report['grand_total_kredit'],
+            'budget_map' => $report['budget_map'],
+        ]);
+
+        $filename = 'laporan-'.now()->format('Ymd_His').'.xlsx';
+        return Excel::download($export, $filename);
+    }
+
+    private function buildReportData(Request $request): array
     {
         $selectedDivisionIds = $request->input('division_ids', []);
         if (!is_array($selectedDivisionIds)) {
@@ -72,12 +118,6 @@ class LaporanJurnalUmumController extends Controller
         $rows = $rowsQuery->get();
 
         $divisionOptions = DB::table('divisions')
-            ->orderBy('name')
-            ->get(['id', 'name']);
-
-        $akunOptions = DB::table('akun_biaya')
-            ->where('id', '!=', 1)
-            ->whereRaw('LOWER(name) != ?', ['kas'])
             ->orderBy('name')
             ->get(['id', 'name']);
 
@@ -158,17 +198,15 @@ class LaporanJurnalUmumController extends Controller
             $budgetMap[$row->akun_biaya_id][$row->division_id] = (float) $row->amount;
         }
 
-        return view('admin.keuangan.laporan-jurnal-umum.index', [
+        return [
             'divisions' => $divisions,
             'akun_groups' => $akunGroups,
             'grand_by_division' => $grandByDivision,
             'grand_total_debet' => (float) $rows->sum('total_debet'),
             'grand_total_kredit' => (float) $rows->sum('total_kredit'),
-            'division_options' => $divisionOptions,
-            'selected_division_ids' => $selectedDivisionIds,
-            'akun_options' => $akunOptions,
-            'selected_akun_ids' => $selectedAkunIds,
             'budget_map' => $budgetMap,
-        ]);
+            'selected_division_ids' => $selectedDivisionIds,
+            'selected_akun_ids' => $selectedAkunIds,
+        ];
     }
 }

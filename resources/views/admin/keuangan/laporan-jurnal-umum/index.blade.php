@@ -43,7 +43,10 @@
                     <button type="submit" class="btn btn-primary">Terapkan</button>
                 </div>
                 <div class="col-auto">
-            <a href="{{ route('admin.keuangan.laporan.index') }}" class="btn btn-light">Reset</a>
+                    <a href="{{ route('admin.keuangan.laporan.index') }}" class="btn btn-light">Reset</a>
+                </div>
+                <div class="col-auto">
+                    <a href="{{ route('admin.keuangan.laporan.export', request()->query()) }}" class="btn btn-light-success">Export Excel</a>
                 </div>
                 <div class="col-12">
                     <div class="form-text">Bisa pilih lebih dari satu divisi dan akun biaya.</div>
