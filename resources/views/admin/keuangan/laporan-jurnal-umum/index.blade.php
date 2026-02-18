@@ -29,6 +29,16 @@
                         @endforeach
                     </select>
                 </div>
+                <div class="col-12 col-md-6 col-lg-4">
+                    <label class="form-label fw-bold">Akun Biaya</label>
+                    <select name="akun_ids[]" class="form-select form-select-solid" multiple data-control="select2" data-placeholder="Pilih akun biaya">
+                        @foreach($akun_options as $akun)
+                            <option value="{{ $akun->id }}" @selected(in_array($akun->id, $selected_akun_ids ?? [], true))>
+                                {{ $akun->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
                 <div class="col-auto">
                     <button type="submit" class="btn btn-primary">Terapkan</button>
                 </div>
@@ -36,14 +46,18 @@
                     <a href="{{ route('admin.keuangan.laporan-jurnal-umum.index') }}" class="btn btn-light">Reset</a>
                 </div>
                 <div class="col-12">
-                    <div class="form-text">Bisa pilih lebih dari satu divisi.</div>
+                    <div class="form-text">Bisa pilih lebih dari satu divisi dan akun biaya.</div>
                 </div>
             </div>
         </form>
 
         @if($akun_groups->isEmpty())
             <div class="text-muted">
-                {{ !empty($selected_division_ids) ? 'Tidak ada data untuk divisi yang dipilih.' : 'Belum ada data jurnal umum.' }}
+                @if(!empty($selected_division_ids) || !empty($selected_akun_ids))
+                    Tidak ada data untuk filter yang dipilih.
+                @else
+                    Belum ada data jurnal umum.
+                @endif
             </div>
         @else
             <div class="table-responsive">

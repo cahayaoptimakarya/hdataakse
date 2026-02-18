@@ -25,6 +25,21 @@ class LaporanJurnalUmumController extends Controller
             ->values()
             ->all();
 
+        $selectedAkunIds = $request->input('akun_ids', []);
+        if (!is_array($selectedAkunIds)) {
+            $selectedAkunIds = [$selectedAkunIds];
+        }
+        $legacyAkunId = $request->integer('akun_id');
+        if ($legacyAkunId > 0) {
+            $selectedAkunIds[] = $legacyAkunId;
+        }
+        $selectedAkunIds = collect($selectedAkunIds)
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+
         $rowsQuery = DB::table('jurnal_umum as ju')
             ->join('sub_divisions as sd', 'sd.id', '=', 'ju.sub_divisi_id')
             ->join('divisions as d', 'd.id', '=', 'sd.division_id')
@@ -50,10 +65,19 @@ class LaporanJurnalUmumController extends Controller
         if (!empty($selectedDivisionIds)) {
             $rowsQuery->whereIn('d.id', $selectedDivisionIds);
         }
+        if (!empty($selectedAkunIds)) {
+            $rowsQuery->whereIn('ab.id', $selectedAkunIds);
+        }
 
         $rows = $rowsQuery->get();
 
         $divisionOptions = DB::table('divisions')
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        $akunOptions = DB::table('akun_biaya')
+            ->where('id', '!=', 1)
+            ->whereRaw('LOWER(name) != ?', ['kas'])
             ->orderBy('name')
             ->get(['id', 'name']);
 
@@ -121,6 +145,8 @@ class LaporanJurnalUmumController extends Controller
             'grand_total_kredit' => (float) $rows->sum('total_kredit'),
             'division_options' => $divisionOptions,
             'selected_division_ids' => $selectedDivisionIds,
+            'akun_options' => $akunOptions,
+            'selected_akun_ids' => $selectedAkunIds,
         ]);
     }
 }
