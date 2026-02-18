@@ -1,13 +1,13 @@
 @extends('layouts.admin')
 
-@section('title', 'Laporan Jurnal Umum')
-@section('page_title', 'Laporan Jurnal Umum')
+@section('title', 'Laporan')
+@section('page_title', 'Laporan')
 
 @section('content')
 <div class="card">
     <div class="card-header border-0 pt-6">
         <div class="card-title">
-            <h2 class="fw-bolder mb-0">Laporan Jurnal Umum</h2>
+            <h2 class="fw-bolder mb-0">Laporan</h2>
         </div>
     </div>
     <div class="card-body py-6">
@@ -43,7 +43,7 @@
                     <button type="submit" class="btn btn-primary">Terapkan</button>
                 </div>
                 <div class="col-auto">
-                    <a href="{{ route('admin.keuangan.laporan-jurnal-umum.index') }}" class="btn btn-light">Reset</a>
+            <a href="{{ route('admin.keuangan.laporan.index') }}" class="btn btn-light">Reset</a>
                 </div>
                 <div class="col-12">
                     <div class="form-text">Bisa pilih lebih dari satu divisi dan akun biaya.</div>

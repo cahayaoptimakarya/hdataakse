@@ -43,6 +43,7 @@ class MenuSeeder extends Seeder
         DB::table('menus')->where('slug', 'sub-divisions')->update(['slug' => 'sub-divisi']);
         DB::table('menus')->where('slug', 'akun-biaya')->update(['slug' => 'akun-pembayaran']);
         DB::table('menus')->where('slug', 'budgets')->update(['slug' => 'budget']);
+        DB::table('menus')->where('slug', 'laporan-jurnal-umum')->update(['slug' => 'laporan']);
 
         $parent = DB::table('menus')->where('slug', 'keuangan')->first();
 
@@ -52,7 +53,7 @@ class MenuSeeder extends Seeder
             ['name' => 'Akun Pembayaran', 'slug' => 'akun-pembayaran', 'route' => 'admin.keuangan.akun-pembayaran.index', 'icon' => 'fa-solid fa-wallet', 'sort_order' => 2],
             ['name' => 'Budget', 'slug' => 'budget', 'route' => 'admin.keuangan.budget.index', 'icon' => 'fa-solid fa-sack-dollar', 'sort_order' => 3],
             ['name' => 'Jurnal Umum', 'slug' => 'jurnal-umum', 'route' => 'admin.keuangan.jurnal-umum.index', 'icon' => 'fa-solid fa-book', 'sort_order' => 4],
-            ['name' => 'Laporan Jurnal Umum', 'slug' => 'laporan-jurnal-umum', 'route' => 'admin.keuangan.laporan-jurnal-umum.index', 'icon' => 'fa-solid fa-chart-column', 'sort_order' => 5],
+            ['name' => 'Laporan', 'slug' => 'laporan', 'route' => 'admin.keuangan.laporan.index', 'icon' => 'fa-solid fa-chart-column', 'sort_order' => 5],
         ];
 
         foreach ($menuRows as $menu) {
@@ -70,6 +71,8 @@ class MenuSeeder extends Seeder
                 ]
             );
         }
+
+        DB::table('menus')->where('slug', 'laporan')->update(['route' => 'admin.keuangan.laporan.index', 'name' => 'Laporan']);
 
         DB::table('menus')
             ->whereIn('slug', ['sub-akun-biaya', 'sub-divisions', 'akun-biaya', 'budgets', 'divisions'])
