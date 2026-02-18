@@ -35,7 +35,7 @@ class JurnalUmumImportController extends Controller
                 $filename = 'jurnal-umum-errors-'.now()->format('Ymd_His').'.xlsx';
                 $path = $dir.'/'.$filename;
                 Excel::store(new JurnalUmumErrorExport($import->errorRows), $path, 'public');
-                $errorFileUrl = '/storage/'.$path;
+                $errorFileUrl = Storage::disk('public')->url($path);
             }
 
             $allFailed = $import->created === 0
