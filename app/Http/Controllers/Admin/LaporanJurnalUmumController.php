@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Exports\LaporanDivisiExport;
 use App\Exports\LaporanExport;
 use App\Models\SubAkunBiaya;
 use Illuminate\Http\Request;
@@ -56,6 +57,19 @@ class LaporanJurnalUmumController extends Controller
         ]);
 
         $filename = 'laporan-'.now()->format('Ymd_His').'.xlsx';
+        return Excel::download($export, $filename);
+    }
+
+    public function exportDivisi(Request $request)
+    {
+        $report = $this->buildDivisionDetailData($request);
+
+        $export = new LaporanDivisiExport([
+            'division_groups' => $report['division_groups'],
+            'budget_map' => $report['budget_map'],
+        ]);
+
+        $filename = 'laporan-per-divisi-'.now()->format('Ymd_His').'.xlsx';
         return Excel::download($export, $filename);
     }
 

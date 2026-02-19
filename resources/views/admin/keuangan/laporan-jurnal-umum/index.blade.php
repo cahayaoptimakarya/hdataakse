@@ -221,6 +221,9 @@
                         <div class="col-auto">
                             <a href="{{ route('admin.keuangan.laporan.index', ['tab' => 'divisi']) }}" class="btn btn-light">Reset</a>
                         </div>
+                        <div class="col-auto">
+                            <a href="{{ route('admin.keuangan.laporan.export-divisi', request()->query()) }}" class="btn btn-light-success">Export Excel</a>
+                        </div>
                         <div class="col-12">
                             <div class="form-text">Bisa pilih lebih dari satu divisi.</div>
                         </div>
