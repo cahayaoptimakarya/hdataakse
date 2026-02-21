@@ -35,38 +35,38 @@
             <div class="tab-pane fade @if($activeTab === 'ringkasan') show active @endif" id="laporan_ringkasan" role="tabpanel">
                 <form method="GET" class="mb-5">
                     <input type="hidden" name="tab" value="ringkasan">
-                    <div class="row g-3 align-items-end">
-                        <div class="col-12 col-md-6 col-lg-4">
-                            <label class="form-label fw-bold">Divisi</label>
-                            <select name="division_ids[]" class="form-select form-select-solid" multiple data-control="select2" data-placeholder="Pilih divisi">
-                                @foreach($division_options as $div)
-                                    <option value="{{ $div->id }}" @selected(in_array($div->id, $selected_division_ids ?? [], true))>
-                                        {{ $div->name }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-12 col-md-6 col-lg-4">
-                            <label class="form-label fw-bold">Akun Biaya</label>
-                            <select name="akun_ids[]" class="form-select form-select-solid" multiple data-control="select2" data-placeholder="Pilih akun biaya">
-                                @foreach($akun_options as $akun)
-                                    <option value="{{ $akun->id }}" @selected(in_array($akun->id, $selected_akun_ids ?? [], true))>
-                                        {{ $akun->name }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-auto">
-                            <button type="submit" class="btn btn-primary">Terapkan</button>
-                        </div>
-                        <div class="col-auto">
-                            <a href="{{ route('admin.keuangan.laporan.index', ['tab' => 'ringkasan']) }}" class="btn btn-light">Reset</a>
-                        </div>
-                        <div class="col-auto">
-                            <a href="{{ route('admin.keuangan.laporan.export', request()->query()) }}" class="btn btn-light-success">Export Excel</a>
-                        </div>
-                        <div class="col-12">
-                            <div class="form-text">Bisa pilih lebih dari satu divisi dan akun biaya.</div>
+                    <div class="p-4 bg-light rounded">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-12 col-md-6 col-lg-4">
+                                <label class="form-label fw-bold">Divisi</label>
+                                <select name="division_ids[]" class="form-select form-select-solid" multiple data-control="select2" data-placeholder="Pilih divisi">
+                                    @foreach($division_options as $div)
+                                        <option value="{{ $div->id }}" @selected(in_array($div->id, $selected_division_ids ?? [], true))>
+                                            {{ $div->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-6 col-lg-4">
+                                <label class="form-label fw-bold">Akun Biaya</label>
+                                <select name="akun_ids[]" class="form-select form-select-solid" multiple data-control="select2" data-placeholder="Pilih akun biaya">
+                                    @foreach($akun_options as $akun)
+                                        <option value="{{ $akun->id }}" @selected(in_array($akun->id, $selected_akun_ids ?? [], true))>
+                                            {{ $akun->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-12 col-lg-4">
+                                <div class="d-flex flex-wrap gap-2 justify-content-lg-end">
+                                    <button type="submit" class="btn btn-primary">Terapkan</button>
+                                    <a href="{{ route('admin.keuangan.laporan.index', ['tab' => 'ringkasan']) }}" class="btn btn-light">Reset</a>
+                                    <a href="{{ route('admin.keuangan.laporan.export', request()->query()) }}" class="btn btn-light-success">Export Excel</a>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-text">Bisa pilih lebih dari satu divisi dan akun biaya.</div>
+                            </div>
                         </div>
                     </div>
                 </form>
@@ -204,54 +204,83 @@
             <div class="tab-pane fade @if($activeTab === 'divisi') show active @endif" id="laporan_divisi" role="tabpanel">
                 <form method="GET" class="mb-5">
                     <input type="hidden" name="tab" value="divisi">
-                    <div class="row g-3 align-items-end">
-                        <div class="col-12 col-md-6 col-lg-4">
-                            <label class="form-label fw-bold">Divisi</label>
-                            <select name="division_ids_divisi[]" class="form-select form-select-solid" multiple data-control="select2" data-placeholder="Pilih divisi">
-                                @foreach($division_options as $div)
-                                    <option value="{{ $div->id }}" @selected(in_array($div->id, $selected_division_ids_divisi ?? [], true))>
-                                        {{ $div->name }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-12 col-md-6 col-lg-5">
-                            <label class="form-label fw-bold">Sub Divisi</label>
-                            @php
-                                $subDivisionGroups = collect($sub_division_options ?? [])->groupBy('division_name');
-                            @endphp
-                            <select name="sub_division_ids_divisi[]" class="form-select form-select-solid" multiple data-control="select2" data-placeholder="Pilih sub divisi">
-                                @forelse($subDivisionGroups as $divisionName => $subs)
-                                    <optgroup label="{{ $divisionName }}">
-                                        @foreach($subs as $sub)
-                                            <option value="{{ $sub->id }}" @selected(in_array($sub->id, $selected_sub_division_ids_divisi ?? [], true))>
-                                                {{ $sub->name }}
-                                            </option>
-                                        @endforeach
-                                    </optgroup>
-                                @empty
-                                    <option value="" disabled>Tidak ada sub divisi</option>
-                                @endforelse
-                            </select>
-                        </div>
-                        <div class="col-auto">
-                            <button type="submit" class="btn btn-primary">Terapkan</button>
-                        </div>
-                        <div class="col-auto">
-                            <a href="{{ route('admin.keuangan.laporan.index', ['tab' => 'divisi']) }}" class="btn btn-light">Reset</a>
-                        </div>
-                        <div class="col-auto">
-                            <a href="{{ route('admin.keuangan.laporan.export-divisi', request()->query()) }}" class="btn btn-light-success">Export Excel</a>
-                        </div>
-                        <div class="col-12">
-                            <div class="form-text">Bisa pilih lebih dari satu divisi dan sub divisi.</div>
+                    <div class="p-4 bg-light rounded">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-12 col-md-6 col-lg-3">
+                                <label class="form-label fw-bold">Divisi</label>
+                                <select name="division_ids_divisi[]" class="form-select form-select-solid" multiple data-control="select2" data-placeholder="Pilih divisi">
+                                    @foreach($division_options as $div)
+                                        <option value="{{ $div->id }}" @selected(in_array($div->id, $selected_division_ids_divisi ?? [], true))>
+                                            {{ $div->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-6 col-lg-3">
+                                <label class="form-label fw-bold">Akun Biaya</label>
+                                <select name="akun_ids_divisi[]" class="form-select form-select-solid" multiple data-control="select2" data-placeholder="Pilih akun biaya">
+                                    @foreach(($akun_options_divisi ?? []) as $akun)
+                                        <option value="{{ $akun->id }}" @selected(in_array($akun->id, $selected_akun_ids_divisi ?? [], true))>
+                                            {{ $akun->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-6 col-lg-3">
+                                <label class="form-label fw-bold">Sub Divisi</label>
+                                @php
+                                    $subDivisionGroups = collect($sub_division_options ?? [])->groupBy('division_name');
+                                @endphp
+                                <select name="sub_division_ids_divisi[]" class="form-select form-select-solid" multiple data-control="select2" data-placeholder="Pilih sub divisi">
+                                    @forelse($subDivisionGroups as $divisionName => $subs)
+                                        <optgroup label="{{ $divisionName }}">
+                                            @foreach($subs as $sub)
+                                                <option value="{{ $sub->id }}" @selected(in_array($sub->id, $selected_sub_division_ids_divisi ?? [], true))>
+                                                    {{ $sub->name }}
+                                                </option>
+                                            @endforeach
+                                        </optgroup>
+                                    @empty
+                                        <option value="" disabled>Tidak ada sub divisi</option>
+                                    @endforelse
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-6 col-lg-3">
+                                <label class="form-label fw-bold">Sub Biaya</label>
+                                @php
+                                    $subAkunGroups = collect($sub_akun_options_divisi ?? [])->groupBy('akun_name');
+                                @endphp
+                                <select name="sub_akun_ids_divisi[]" class="form-select form-select-solid" multiple data-control="select2" data-placeholder="Pilih sub biaya">
+                                    @forelse($subAkunGroups as $akunName => $subs)
+                                        <optgroup label="{{ $akunName }}">
+                                            @foreach($subs as $sub)
+                                                <option value="{{ $sub->id }}" @selected(in_array($sub->id, $selected_sub_akun_ids_divisi ?? [], true))>
+                                                    {{ $sub->name }}
+                                                </option>
+                                            @endforeach
+                                        </optgroup>
+                                    @empty
+                                        <option value="" disabled>Tidak ada sub biaya</option>
+                                    @endforelse
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <div class="d-flex flex-wrap gap-2 justify-content-lg-end">
+                                    <button type="submit" class="btn btn-primary">Terapkan</button>
+                                    <a href="{{ route('admin.keuangan.laporan.index', ['tab' => 'divisi']) }}" class="btn btn-light">Reset</a>
+                                    <a href="{{ route('admin.keuangan.laporan.export-divisi', request()->query()) }}" class="btn btn-light-success">Export Excel</a>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-text">Bisa pilih lebih dari satu divisi, sub divisi, akun biaya, dan sub biaya.</div>
+                            </div>
                         </div>
                     </div>
                 </form>
 
                 @if($division_detail_groups->isEmpty())
                     <div class="text-muted">
-                        @if(!empty($selected_division_ids_divisi) || !empty($selected_sub_division_ids_divisi))
+                        @if(!empty($selected_division_ids_divisi) || !empty($selected_sub_division_ids_divisi) || !empty($selected_akun_ids_divisi) || !empty($selected_sub_akun_ids_divisi))
                             Tidak ada data untuk filter yang dipilih.
                         @else
                             Belum ada data jurnal umum.
