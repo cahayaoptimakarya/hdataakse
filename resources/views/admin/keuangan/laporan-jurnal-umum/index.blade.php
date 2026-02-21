@@ -215,6 +215,25 @@
                                 @endforeach
                             </select>
                         </div>
+                        <div class="col-12 col-md-6 col-lg-5">
+                            <label class="form-label fw-bold">Sub Divisi</label>
+                            @php
+                                $subDivisionGroups = collect($sub_division_options ?? [])->groupBy('division_name');
+                            @endphp
+                            <select name="sub_division_ids_divisi[]" class="form-select form-select-solid" multiple data-control="select2" data-placeholder="Pilih sub divisi">
+                                @forelse($subDivisionGroups as $divisionName => $subs)
+                                    <optgroup label="{{ $divisionName }}">
+                                        @foreach($subs as $sub)
+                                            <option value="{{ $sub->id }}" @selected(in_array($sub->id, $selected_sub_division_ids_divisi ?? [], true))>
+                                                {{ $sub->name }}
+                                            </option>
+                                        @endforeach
+                                    </optgroup>
+                                @empty
+                                    <option value="" disabled>Tidak ada sub divisi</option>
+                                @endforelse
+                            </select>
+                        </div>
                         <div class="col-auto">
                             <button type="submit" class="btn btn-primary">Terapkan</button>
                         </div>
@@ -225,14 +244,14 @@
                             <a href="{{ route('admin.keuangan.laporan.export-divisi', request()->query()) }}" class="btn btn-light-success">Export Excel</a>
                         </div>
                         <div class="col-12">
-                            <div class="form-text">Bisa pilih lebih dari satu divisi.</div>
+                            <div class="form-text">Bisa pilih lebih dari satu divisi dan sub divisi.</div>
                         </div>
                     </div>
                 </form>
 
                 @if($division_detail_groups->isEmpty())
                     <div class="text-muted">
-                        @if(!empty($selected_division_ids_divisi))
+                        @if(!empty($selected_division_ids_divisi) || !empty($selected_sub_division_ids_divisi))
                             Tidak ada data untuk filter yang dipilih.
                         @else
                             Belum ada data jurnal umum.

@@ -27,6 +27,21 @@ class LaporanJurnalUmumController extends Controller
             ->orderBy('name')
             ->get(['id', 'name']);
 
+        $subDivisionOptionsQuery = DB::table('sub_divisions as sd')
+            ->join('divisions as d', 'd.id', '=', 'sd.division_id');
+        if (!empty($divisionReport['selected_division_ids'])) {
+            $subDivisionOptionsQuery->whereIn('d.id', $divisionReport['selected_division_ids']);
+        }
+        $subDivisionOptions = $subDivisionOptionsQuery
+            ->orderBy('d.name')
+            ->orderBy('sd.name')
+            ->get([
+                'sd.id',
+                'sd.name',
+                'sd.division_id',
+                'd.name as division_name',
+            ]);
+
         return view('admin.keuangan.laporan-jurnal-umum.index', [
             'divisions' => $report['divisions'],
             'akun_groups' => $report['akun_groups'],
@@ -41,6 +56,8 @@ class LaporanJurnalUmumController extends Controller
             'division_detail_groups' => $divisionReport['division_groups'],
             'selected_division_ids_divisi' => $divisionReport['selected_division_ids'],
             'sub_divisi_budget_map' => $divisionReport['budget_map'],
+            'sub_division_options' => $subDivisionOptions,
+            'selected_sub_division_ids_divisi' => $divisionReport['selected_sub_division_ids'],
         ]);
     }
 
@@ -407,6 +424,30 @@ class LaporanJurnalUmumController extends Controller
             ->values()
             ->all();
 
+        $selectedSubDivisionIds = $request->input('sub_division_ids_divisi', []);
+        if (!is_array($selectedSubDivisionIds)) {
+            $selectedSubDivisionIds = [$selectedSubDivisionIds];
+        }
+        $legacySubDivisionId = $request->integer('sub_division_id_divisi');
+        if ($legacySubDivisionId > 0) {
+            $selectedSubDivisionIds[] = $legacySubDivisionId;
+        }
+        $selectedSubDivisionIds = collect($selectedSubDivisionIds)
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        if (!empty($selectedDivisionIds) && !empty($selectedSubDivisionIds)) {
+            $selectedSubDivisionIds = DB::table('sub_divisions')
+                ->whereIn('id', $selectedSubDivisionIds)
+                ->whereIn('division_id', $selectedDivisionIds)
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
+        }
+
         $rowsQuery = DB::table('jurnal_umum as ju')
             ->join('sub_divisions as sd', 'sd.id', '=', 'ju.sub_divisi_id')
             ->join('divisions as d', 'd.id', '=', 'sd.division_id')
@@ -433,6 +474,9 @@ class LaporanJurnalUmumController extends Controller
 
         if (!empty($selectedDivisionIds)) {
             $rowsQuery->whereIn('d.id', $selectedDivisionIds);
+        }
+        if (!empty($selectedSubDivisionIds)) {
+            $rowsQuery->whereIn('sd.id', $selectedSubDivisionIds);
         }
 
         $rows = $rowsQuery->get();
@@ -524,6 +568,7 @@ class LaporanJurnalUmumController extends Controller
         return [
             'division_groups' => $divisionGroups,
             'selected_division_ids' => $selectedDivisionIds,
+            'selected_sub_division_ids' => $selectedSubDivisionIds,
             'budget_map' => $budgetMap,
         ];
     }
