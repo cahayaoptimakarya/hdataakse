@@ -1,26 +1,19 @@
-<x-guest-layout>
-    <div class="mb-6 text-center">
-        <h1 class="text-2xl font-semibold tracking-tight text-gray-800">Lupa Kata Sandi</h1>
-        <p class="mt-1 text-sm text-gray-600">Masukkan email Anda untuk menerima tautan reset kata sandi.</p>
-    </div>
+@extends('layouts.auth')
 
-    <!-- Session Status -->
-    <x-auth-session-status class="mb-4" :status="session('status')" />
+@section('title', 'Lupa kata sandi')
 
-    <form method="POST" action="{{ route('password.email') }}" class="space-y-4">
+@section('form')
+    <h2>Lupa kata sandi</h2>
+    <div class="sub">Masukkan email akun Anda. Kami kirimkan tautan untuk membuat kata sandi baru.</div>
+    @if (session('status'))
+        <div class="ok">{{ session('status') }}</div>
+    @endif
+    <form method="POST" action="{{ route('password.email') }}">
         @csrf
-
-        <!-- Email Address -->
-        <div>
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email')" required autofocus />
-            <x-input-error :messages="$errors->get('email')" class="mt-2" />
-        </div>
-
-        <div class="flex items-center justify-end pt-2">
-            <x-primary-button>
-                {{ __('Kirim Tautan Reset') }}
-            </x-primary-button>
-        </div>
+        <label for="email">Email</label>
+        <input id="email" type="email" name="email" value="{{ old('email') }}" required autofocus class="@error('email') bad @enderror">
+        @error('email')<div class="err">{{ $message }}</div>@enderror
+        <button type="submit" class="btn">Kirim tautan reset</button>
     </form>
-</x-guest-layout>
+    <div class="note"><a href="{{ route('login') }}">Kembali ke halaman masuk</a></div>
+@endsection
