@@ -18,7 +18,8 @@
                 <input type="file" name="file" id="jurnal_import_file" class="form-control form-control-solid" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" required>
                 <div class="text-danger small mt-2" id="jurnal_import_error"></div>
                 <div class="form-text mt-2">
-                    Header wajib: <code>keterangan</code>, <code>toko</code>, <code>kategori</code>, <code>debet</code>, <code>kredit</code>.
+                    Header wajib: <code>tanggal</code>, <code>keterangan</code>, <code>toko</code>, <code>kategori</code>, <code>debet</code>, <code>kredit</code>.
+                    <a href="{{ route('admin.keuangan.jurnal-umum.template') }}" class="ms-1">Download template</a>
                 </div>
             </div>
             <div class="mb-10">
@@ -26,6 +27,7 @@
                 <ul class="text-muted fs-7 mb-0">
                     <li>Format file Excel (.xlsx/.xls), ukuran maksimal 5 MB.</li>
                     <li>Header berada di baris pertama.</li>
+                    <li><code>tanggal</code> wajib diisi. Boleh berupa sel tanggal Excel, atau teks <code>dd/mm/yyyy</code> (mis. 21/11/2026) atau <code>yyyy-mm-dd</code> (mis. 2026-11-21).</li>
                     <li><code>toko</code> akan dicocokkan ke tabel <code>sub_divisions</code> (kolom <code>name</code>).</li>
                     <li><code>kategori</code> akan dicocokkan ke tabel <code>sub_akun_biaya</code> (kolom <code>name</code>).</li>
                     <li><code>debet</code> dan <code>kredit</code> bernilai angka >= 0. Boleh pakai pemisah ribuan.</li>

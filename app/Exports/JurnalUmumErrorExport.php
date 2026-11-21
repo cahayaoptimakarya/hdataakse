@@ -14,6 +14,7 @@ class JurnalUmumErrorExport implements FromArray, WithHeadings
     public function headings(): array
     {
         return [
+            'tanggal',
             'keterangan',
             'toko',
             'kategori',

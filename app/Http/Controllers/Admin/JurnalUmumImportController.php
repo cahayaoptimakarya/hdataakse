@@ -8,12 +8,18 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\JurnalUmumErrorExport;
+use App\Exports\JurnalUmumTemplateExport;
 
 class JurnalUmumImportController extends Controller
 {
     public function index()
     {
         return view('admin.keuangan.jurnal-umum.index');
+    }
+
+    public function template()
+    {
+        return Excel::download(new JurnalUmumTemplateExport(), 'template-import-jurnal-umum.xlsx');
     }
 
     public function store(Request $request)

@@ -579,6 +579,12 @@
             return new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(safe);
         };
 
+        const formatTanggal = (value) => {
+            if (!value) return '-';
+            const m = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/);
+            return m ? `${m[3]}/${m[2]}/${m[1]}` : String(value);
+        };
+
         const toNumber = (value) => {
             if (value === null || value === undefined) return 0;
             let cleaned = String(value).replace(/[^0-9.,-]/g, '');
@@ -1056,7 +1062,7 @@
                         rows.forEach((row) => {
                             const tr = document.createElement('tr');
                             tr.innerHTML = `
-                                <td>${row.tanggal ?? '-'}</td>
+                                <td class="text-nowrap">${formatTanggal(row.tanggal)}</td>
                                 <td>${row.division ?? '-'}</td>
                                 <td>${row.toko ?? '-'}</td>
                                 <td>${row.keterangan ?? '-'}</td>
