@@ -15,7 +15,7 @@
 @section('content')
     <form method="GET" class="ui-filter mb-4">
         <div class="row g-3 align-items-end">
-            <div class="col-12 col-lg-3">
+            <div class="col-12 col-lg-4">
                 <label class="form-label">Cari</label>
                 <input type="text" name="q" value="{{ $filters['q'] }}" class="form-control form-control-solid form-control-sm" placeholder="Nama divisi, akun, file…">
             </div>
@@ -40,15 +40,15 @@
                     @foreach($users as $u)<option value="{{ $u->id }}" @selected($filters['user_id'] === $u->id)>{{ $u->name }}</option>@endforeach
                 </select>
             </div>
-            <div class="col-6 col-lg-auto">
+            <div class="col-6 col-lg-2">
                 <label class="form-label">Dari</label>
                 <input type="date" name="dari" value="{{ $filters['dari'] }}" class="form-control form-control-solid form-control-sm">
             </div>
-            <div class="col-6 col-lg-auto">
+            <div class="col-6 col-lg-2">
                 <label class="form-label">Sampai</label>
                 <input type="date" name="sampai" value="{{ $filters['sampai'] }}" class="form-control form-control-solid form-control-sm">
             </div>
-            <div class="col-auto ms-auto d-flex gap-2">
+            <div class="col-12 d-flex gap-2 justify-content-end">
                 <a href="{{ route('admin.masterdata.audit.index') }}" class="btn btn-light btn-sm">Reset</a>
                 <button class="btn btn-primary btn-sm">Terapkan</button>
             </div>

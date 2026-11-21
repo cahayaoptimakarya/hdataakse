@@ -270,8 +270,8 @@
             </div>
             <div class="d-flex align-items-center gap-3">
                 <button type="submit" class="btn btn-primary" id="btn_import_submit">
-                    <span class="indicator-label">Mulai Import</span>
-                    <span class="indicator-progress">Please wait...
+                    <span class="indicator-label">Cek file (pratinjau)</span>
+                    <span class="indicator-progress">Memeriksa…
                         <span class="spinner-border spinner-border-sm align-middle ms-2"></span>
                     </span>
                 </button>
@@ -281,26 +281,43 @@
             </div>
         </form>
 
+        <div class="ui-panel mt-8" id="import_preview" style="display:none;">
+            <div class="hd"><h3>Pratinjau import</h3><span class="ui-sp"></span><small>Belum ada data yang disimpan</small></div>
+            <div class="p-5">
+                <div class="ui-kpis mb-4" id="pv_kpis"></div>
+                <div class="row g-4">
+                    <div class="col-lg-4"><div class="fw-semibold fs-7 text-uppercase ui-muted mb-2">Per toko</div><div id="pv_toko"></div></div>
+                    <div class="col-lg-8"><div class="fw-semibold fs-7 text-uppercase ui-muted mb-2">Contoh baris (10 pertama)</div>
+                        <div class="table-responsive"><table class="table table-sm align-middle mb-0 no-ui"><thead><tr><th>Tanggal</th><th>Keterangan</th><th>Toko</th><th>Kategori</th><th class="text-end">Kredit</th></tr></thead><tbody id="pv_rows"></tbody></table></div>
+                    </div>
+                </div>
+                <div class="d-flex gap-2 justify-content-end mt-5">
+                    <button type="button" class="btn btn-light" id="pv_cancel">Batal</button>
+                    <button type="button" class="btn btn-primary" id="pv_save"><i class="fa-solid fa-check me-1"></i> Simpan import</button>
+                </div>
+            </div>
+        </div>
+
         <div class="row mt-10" id="import_summary" style="display:none;">
             <div class="col-md-6 col-lg-4">
                 <div class="border rounded p-4">
-                    <div class="fw-bold">Ringkasan Import</div>
+                    <div class="fw-bold">Ringkasan import</div>
                     <div class="d-flex justify-content-between mt-3">
-                        <span>Created</span>
+                        <span>Masuk</span>
                         <span id="import_created">0</span>
                     </div>
                     <div class="d-flex justify-content-between mt-2">
-                        <span>Skipped</span>
+                        <span>Dilewati</span>
                         <span id="import_skipped">0</span>
                     </div>
                 </div>
             </div>
             <div class="col-lg-8 mt-6 mt-lg-0">
                 <div class="border rounded p-4">
-                    <div class="fw-bold mb-3">Error (max 20)</div>
+                    <div class="fw-bold mb-3">Error (maks. 20)</div>
                     <ul class="mb-0" id="import_errors"></ul>
                     <div class="mt-4" id="error_file_wrapper" style="display:none;">
-                        <a href="#" class="btn btn-light-danger" id="error_file_link" download>Download File Error</a>
+                        <a href="#" class="btn btn-light-danger" id="error_file_link" download>Unduh file error</a>
                     </div>
                 </div>
             </div>
@@ -341,8 +358,34 @@
             }
         };
 
+        const previewEl = document.getElementById('import_preview');
+        const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        const rp = (v) => 'Rp ' + new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(Number(v || 0));
+        const tgl = (v) => { const m = String(v || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : '–'; };
+        let saveForReal = false;
+        fileInput?.addEventListener('change', () => { if (previewEl) previewEl.style.display = 'none'; });
+        document.getElementById('pv_cancel')?.addEventListener('click', () => { previewEl.style.display = 'none'; if (fileInput) fileInput.value = ''; });
+        document.getElementById('pv_save')?.addEventListener('click', () => { saveForReal = true; form.requestSubmit(); });
+        const showPreview = (json) => {
+            document.getElementById('pv_kpis').innerHTML = [
+                ['Baris siap masuk', new Intl.NumberFormat('id-ID').format(json.created)],
+                ['Total kredit', rp(json.total_kredit)],
+                ['Total debet', rp(json.total_debet)],
+                ['Rentang tanggal', json.tanggal_awal ? `${tgl(json.tanggal_awal)} – ${tgl(json.tanggal_akhir)}` : '–'],
+            ].map(([l, v]) => `<div class="ui-kpi"><div class="l">${l}</div><div class="v" style="font-size:17px">${esc(v)}</div></div>`).join('');
+            document.getElementById('pv_toko').innerHTML = (json.per_toko || []).map((t) =>
+                `<div class="d-flex justify-content-between py-1 border-bottom"><span>${esc(t.name)} <span class="ui-muted fs-8">${t.jumlah} baris</span></span><span>${rp(t.total)}</span></div>`).join('');
+            document.getElementById('pv_rows').innerHTML = (json.sample || []).map((r) =>
+                `<tr><td class="text-nowrap">${tgl(r.tanggal)}</td><td>${esc(r.keterangan)}</td><td>${esc(r.toko)}</td><td>${esc(r.kategori)}</td><td class="text-end text-nowrap">${rp(r.kredit)}</td></tr>`).join('');
+            previewEl.style.display = 'block';
+            previewEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        };
+
         form?.addEventListener('submit', async (e) => {
             e.preventDefault();
+            const isPreview = !saveForReal;
+            saveForReal = false;
+            if (previewEl) previewEl.style.display = 'none';
             if (errorEl) errorEl.textContent = '';
             if (summaryEl) summaryEl.style.display = 'none';
             if (errorsEl) errorsEl.innerHTML = '';
@@ -357,6 +400,7 @@
 
             const formData = new FormData();
             formData.append('file', file);
+            if (isPreview) formData.append('preview', '1');
 
             setLoading(true);
             try {
@@ -378,6 +422,10 @@
                     if (errorEl) errorEl.textContent = json.message || 'Gagal import.';
                     return;
                 }
+                if (json.preview && !json.all_failed) {
+                    showPreview(json);
+                    return;
+                }
                 if (createdEl) createdEl.textContent = json.created ?? 0;
                 if (skippedEl) skippedEl.textContent = json.skipped ?? 0;
                 if (errorsEl && Array.isArray(json.errors)) {
@@ -395,10 +443,10 @@
                 if (typeof Swal !== 'undefined') {
                     if (json.error_file_url) {
                         const warnText = json.all_failed
-                            ? 'Semua data tidak dimasukkan ke database karena ada error.'
+                            ? (json.preview ? 'File ini belum bisa di-import karena ada baris error. Perbaiki dulu barisnya.' : 'Semua data tidak dimasukkan ke database karena ada error.')
                             : 'Sebagian data gagal diimport. Download file error untuk detail.';
                         Swal.fire({
-                            title: 'Import selesai dengan error',
+                            title: json.preview ? 'Ada baris yang perlu diperbaiki' : 'Import selesai dengan error',
                             text: warnText,
                             icon: 'warning',
                             showCancelButton: true,

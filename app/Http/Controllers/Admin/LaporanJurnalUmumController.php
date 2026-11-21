@@ -51,6 +51,7 @@ class LaporanJurnalUmumController extends Controller
         } elseif ($tab === 'tren') {
             $data['tren_tahun'] = $periode->tahun ?? (int) now()->year;
             $data['tren'] = CostReport::monthlyByAkun($data['tren_tahun'], $divisionIds, $akunIds);
+            $data['tren_lalu'] = CostReport::monthlyRealisasi($data['tren_tahun'] - 1, $divisionIds, $akunIds);
         } else {
             $data += $this->tokoTabData($request);
         }

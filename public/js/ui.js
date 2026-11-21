@@ -32,8 +32,11 @@
                     var clear = document.createElement('button');
                     clear.type = 'button'; clear.className = 'ui-date-clear'; clear.innerHTML = '&times;'; clear.title = 'Kosongkan';
                     clear.addEventListener('click', function () { fp.clear(); });
-                    fp.altInput.parentNode.insertBefore(clear, fp.altInput.nextSibling);
-                    fp.altInput.parentNode.classList.add('ui-date-wrap');
+                    var wrap = document.createElement('div');
+                    wrap.className = 'ui-date-wrap';
+                    fp.altInput.parentNode.insertBefore(wrap, fp.altInput);
+                    wrap.appendChild(fp.altInput);
+                    wrap.appendChild(clear);
                 },
             });
         });

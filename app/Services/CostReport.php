@@ -161,6 +161,24 @@ class CostReport
         return $months;
     }
 
+    /** Realisasi saja per bulan (1..12), satu query. Dipakai untuk pembanding tahun lalu. */
+    public static function monthlyRealisasi(int $tahun, array $divisionIds = [], array $akunIds = []): array
+    {
+        $q = (new self(new Periode($tahun)))->baseJurnal()
+            ->select('ju.tanggal', DB::raw('SUM(ju.kredit) as total'))->groupBy('ju.tanggal');
+        if ($divisionIds) {
+            $q->whereIn('d.id', $divisionIds);
+        }
+        if ($akunIds) {
+            $q->whereIn('ab.id', $akunIds);
+        }
+        $out = array_fill(1, 12, 0.0);
+        foreach ($q->get() as $r) {
+            $out[(int) substr((string) $r->tanggal, 5, 2)] += (float) $r->total;
+        }
+        return $out;
+    }
+
     /**
      * Realisasi dan budget per akun per bulan dalam satu tahun.
      *
