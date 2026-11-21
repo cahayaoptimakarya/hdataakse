@@ -20,6 +20,9 @@
             <h2 class="fw-bolder mb-0">Jurnal Umum</h2>
         </div>
         <div class="card-toolbar gap-2">
+            @if($tab === 'transaksi')
+                <button type="button" class="btn btn-light-primary" id="btn_tx_add"><i class="fa-solid fa-plus me-1"></i> Tambah transaksi</button>
+            @endif
             <a href="{{ $tabUrl('import') }}" class="btn btn-primary"><i class="fa-solid fa-file-import me-1"></i> Import Jurnal</a>
         </div>
     </div>
@@ -135,7 +138,8 @@
                             <th>Toko · Divisi</th>
                             <th>Kategori · Akun</th>
                             <th class="text-end">Debet</th>
-                            <th class="text-end pe-3">Kredit</th>
+                            <th class="text-end">Kredit</th>
+                            <th class="text-end pe-3">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -159,10 +163,14 @@
                                 <td class="text-nowrap" data-label="Toko">{{ $row->toko }}<div class="text-muted fs-7">{{ $row->divisi }}</div></td>
                                 <td class="text-nowrap" data-label="Kategori">{{ $row->kategori }}<div class="text-muted fs-7">{{ $row->akun }}</div></td>
                                 <td class="text-end text-nowrap" data-label="Debet">{!! (float) $row->debet ? e($rp($row->debet)) : '<span class="text-muted">–</span>' !!}</td>
-                                <td class="text-end text-nowrap pe-3" data-label="Kredit">{!! (float) $row->kredit ? e($rp($row->kredit)) : '<span class="text-muted">–</span>' !!}</td>
+                                <td class="text-end text-nowrap" data-label="Kredit">{!! (float) $row->kredit ? e($rp($row->kredit)) : '<span class="text-muted">–</span>' !!}</td>
+                                <td class="text-end text-nowrap pe-3" data-label="">
+                                    <button type="button" class="btn btn-sm btn-icon btn-light btn-tx-edit" data-id="{{ $row->id }}" title="Ubah"><i class="fa-solid fa-pen fs-7"></i></button>
+                                    <button type="button" class="btn btn-sm btn-icon btn-light-danger btn-tx-delete" data-id="{{ $row->id }}" data-label="{{ $row->keterangan }}" title="Hapus"><i class="fa-solid fa-trash fs-7"></i></button>
+                                </td>
                             </tr>
                         @empty
-                            <tr><td colspan="7" data-label="" class="text-center text-muted py-10">Tidak ada transaksi untuk filter ini.</td></tr>
+                            <tr><td colspan="8" data-label="" class="text-center text-muted py-10">Tidak ada transaksi untuk filter ini.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
@@ -325,6 +333,64 @@
         @endif
     </div>
 </div>
+<div class="modal fade" id="modal_tx" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <form class="modal-content" id="tx_form" novalidate>
+            <div class="modal-header py-4">
+                <h3 class="modal-title fs-4" id="tx_title">Tambah transaksi</h3>
+                <button type="button" class="btn btn-sm btn-icon btn-light" data-bs-dismiss="modal" aria-label="Tutup"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-light-warning py-3 fs-7 d-none" id="tx_batch_note">Transaksi ini berasal dari import. Bila batch importnya dibatalkan, transaksi ini ikut terhapus.</div>
+                <div class="row g-4">
+                    <div class="col-md-4">
+                        <label class="form-label required">Tanggal</label>
+                        <input type="date" name="tanggal" class="form-control form-control-solid" required>
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label required">Keterangan</label>
+                        <input type="text" name="keterangan" class="form-control form-control-solid" maxlength="255" required placeholder="Mis. Bayar listrik Oktober">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label required">Toko</label>
+                        <select name="sub_divisi_id" class="form-select form-select-solid" data-ui-select required data-placeholder="Pilih toko">
+                            <option value=""></option>
+                            @foreach(collect($subDivisiOptions)->groupBy('division_name') as $div => $opts)
+                                <optgroup label="{{ $div }}">
+                                    @foreach($opts as $o)<option value="{{ $o->id }}">{{ $o->name }}</option>@endforeach
+                                </optgroup>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label required">Kategori</label>
+                        <select name="sub_akun_biaya_id" class="form-select form-select-solid" data-ui-select required data-placeholder="Pilih kategori">
+                            <option value=""></option>
+                            @foreach(collect($subAkunOptions)->groupBy('akun_name') as $akun => $opts)
+                                <optgroup label="{{ $akun }}">
+                                    @foreach($opts as $o)<option value="{{ $o->id }}">{{ $o->name }}</option>@endforeach
+                                </optgroup>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">Debet (uang masuk)</label>
+                        <input type="text" name="debet" class="form-control form-control-solid" data-money inputmode="numeric" placeholder="0">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">Kredit (biaya)</label>
+                        <input type="text" name="kredit" class="form-control form-control-solid" data-money inputmode="numeric" placeholder="0">
+                    </div>
+                </div>
+                <div class="text-danger fs-7 mt-4 d-none" id="tx_error"></div>
+            </div>
+            <div class="modal-footer py-3">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
+                <button type="submit" class="btn btn-primary" id="tx_save">Simpan</button>
+            </div>
+        </form>
+    </div>
+</div>
 @endsection
 
 @push('scripts')
@@ -333,6 +399,97 @@
     const destroyUrl = '{{ route('admin.keuangan.jurnal-umum.destroy') }}';
     const csrfToken = '{{ csrf_token() }}';
     const listUrl = '{{ route('admin.keuangan.jurnal-umum.index') }}';
+
+    // ---------- Tambah / ubah / hapus transaksi ----------
+    document.addEventListener('DOMContentLoaded', () => {
+        const modalEl = document.getElementById('modal_tx');
+        if (!modalEl) return;
+        const txUrl = @json(url('admin/keuangan/jurnal-umum/transaksi'));
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        const form = document.getElementById('tx_form');
+        const err = document.getElementById('tx_error');
+        const saveBtn = document.getElementById('tx_save');
+        let editId = null;
+
+        const setVal = (name, v) => {
+            const el = form.elements[name];
+            if (name === 'tanggal' && el._flatpickr) { v ? el._flatpickr.setDate(v, true) : el._flatpickr.clear(); return; }
+            if (el.hasAttribute('data-money') && window.UI?.setMoney) { window.UI.setMoney(el, v || ''); return; }
+            el.value = v ?? '';
+            if (window.jQuery && jQuery(el).data('select2')) jQuery(el).trigger('change');
+        };
+        const fill = (d) => {
+            ['tanggal', 'keterangan', 'sub_divisi_id', 'sub_akun_biaya_id'].forEach((k) => setVal(k, d[k]));
+            setVal('debet', d.debet ? String(Math.round(d.debet)) : '');
+            setVal('kredit', d.kredit ? String(Math.round(d.kredit)) : '');
+            document.getElementById('tx_batch_note').classList.toggle('d-none', !d.import_batch_id);
+            err.classList.add('d-none');
+        };
+        const openModal = () => { modal.show(); };
+
+        document.getElementById('btn_tx_add')?.addEventListener('click', () => {
+            editId = null;
+            document.getElementById('tx_title').textContent = 'Tambah transaksi';
+            modalEl.addEventListener('shown.bs.modal', () => fill({ tanggal: new Date().toISOString().slice(0, 10) }), { once: true });
+            openModal();
+        });
+        document.querySelectorAll('.btn-tx-edit').forEach((btn) => btn.addEventListener('click', async () => {
+            editId = btn.dataset.id;
+            document.getElementById('tx_title').textContent = 'Ubah transaksi';
+            btn.disabled = true;
+            try {
+                const res = await fetch(`${txUrl}/${editId}`, { headers: { Accept: 'application/json' } });
+                if (!res.ok) throw new Error('Gagal memuat transaksi.');
+                const d = await res.json();
+                modalEl.addEventListener('shown.bs.modal', () => fill(d), { once: true });
+                openModal();
+            } catch (e) {
+                if (typeof Swal !== 'undefined') Swal.fire('Error', e.message, 'error');
+            } finally { btn.disabled = false; }
+        }));
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            err.classList.add('d-none');
+            const body = new FormData(form);
+            if (editId) body.append('_method', 'PUT');
+            saveBtn.disabled = true;
+            try {
+                const res = await fetch(editId ? `${txUrl}/${editId}` : txUrl, {
+                    method: 'POST', body, headers: { 'X-CSRF-TOKEN': csrfToken, Accept: 'application/json' },
+                });
+                const json = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    const first = json.errors ? Object.values(json.errors)[0][0] : null;
+                    throw new Error(first || json.message || 'Gagal menyimpan.');
+                }
+                modal.hide();
+                if (typeof Swal !== 'undefined') await Swal.fire({ icon: 'success', title: json.message, timer: 1200, showConfirmButton: false });
+                window.location.reload();
+            } catch (e2) {
+                err.textContent = e2.message;
+                err.classList.remove('d-none');
+            } finally { saveBtn.disabled = false; }
+        });
+
+        document.querySelectorAll('.btn-tx-delete').forEach((btn) => btn.addEventListener('click', async () => {
+            const label = btn.dataset.label || 'transaksi ini';
+            if (typeof Swal !== 'undefined') {
+                const c = await Swal.fire({ title: 'Hapus transaksi?', text: label, icon: 'warning', showCancelButton: true, confirmButtonText: 'Ya, hapus', cancelButtonText: 'Batal' });
+                if (!c.isConfirmed) return;
+            } else if (!window.confirm('Hapus transaksi?')) return;
+            btn.disabled = true;
+            try {
+                const res = await fetch(`${txUrl}/${btn.dataset.id}`, { method: 'DELETE', headers: { 'X-CSRF-TOKEN': csrfToken, Accept: 'application/json' } });
+                const json = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(json.message || 'Gagal menghapus.');
+                window.location.reload();
+            } catch (e) {
+                btn.disabled = false;
+                if (typeof Swal !== 'undefined') Swal.fire('Error', e.message, 'error');
+            }
+        }));
+    });
 
     document.addEventListener('DOMContentLoaded', () => {
         const form = document.getElementById('jurnal_import_form');

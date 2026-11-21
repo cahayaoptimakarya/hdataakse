@@ -108,6 +108,10 @@ Route::middleware(['auth', 'verified', 'menu.permission'])->prefix('admin')->as(
         Route::post('/jurnal-umum', [JurnalUmumImportController::class, 'store'])->name('jurnal-umum.store');
         Route::delete('/jurnal-umum', [JurnalUmumImportController::class, 'destroyAll'])->name('jurnal-umum.destroy');
         Route::delete('/jurnal-umum/batch/{batch}', [JurnalUmumImportController::class, 'cancelBatch'])->name('jurnal-umum.batches.destroy');
+        Route::get('/jurnal-umum/transaksi/{jurnal}', [\App\Http\Controllers\Admin\JurnalUmumController::class, 'show'])->name('jurnal-umum.transaksi.show');
+        Route::post('/jurnal-umum/transaksi', [\App\Http\Controllers\Admin\JurnalUmumController::class, 'store'])->name('jurnal-umum.transaksi.store');
+        Route::put('/jurnal-umum/transaksi/{jurnal}', [\App\Http\Controllers\Admin\JurnalUmumController::class, 'update'])->name('jurnal-umum.transaksi.update');
+        Route::delete('/jurnal-umum/transaksi/{jurnal}', [\App\Http\Controllers\Admin\JurnalUmumController::class, 'destroy'])->name('jurnal-umum.transaksi.destroy');
 
         // Laporan
         Route::get('/laporan', [LaporanJurnalUmumController::class, 'index'])->name('laporan.index');
