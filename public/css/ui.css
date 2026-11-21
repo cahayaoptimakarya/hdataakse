@@ -221,8 +221,9 @@ body.ui h1, body.ui h2, body.ui h3, body.ui h4, body.ui .fw-bolder { font-family
 
 /* ---------- Responsive ---------- */
 @media (min-width: 992px) {
-    /* Latar sidebar penuh setinggi halaman (juga saat halaman panjang). */
-    .ui-app { background: linear-gradient(90deg, var(--ui-side) var(--ui-side-w), transparent var(--ui-side-w)); }
+    /* Sidebar menempel di kiri setinggi layar, konten bergulir di sebelahnya. */
+    .ui-side { position: fixed; left: 0; top: 0; bottom: 0; height: auto; }
+    .ui-main { margin-left: var(--ui-side-w); }
 }
 @media (max-width: 991.98px) {
     .ui-side { box-shadow: none; }
