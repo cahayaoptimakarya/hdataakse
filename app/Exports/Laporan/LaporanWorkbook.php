@@ -185,103 +185,221 @@ class LaporanWorkbook
         $this->gridBorders($ws, "A$ph:G".max($ph, $pr));
         $this->print($ws, PageSetup::ORIENTATION_PORTRAIT);
 
-        // ---- Sheet 2: matriks akun × divisi
-        $this->sheetMatriks($book->createSheet(), $m);
+        // ---- Sheet 2..n: format blok per akun (Total / Budget / Selisih), semua divisi lalu per divisi.
+        $akunAll = $m['akun'];
+        $this->sheetBlok($book->createSheet(), 'Semua Divisi', 'Divisi', $divs, $akunAll,
+            fn ($a, $s, $col) => $s === null ? ($m['cells'][$a->id]['_'][$col->id] ?? 0) : ($m['cells'][$a->id][$s->id][$col->id] ?? 0),
+            fn ($a, $col) => $m['budget'][$a->id][$col->id] ?? null,
+            null);
+
+        $tokoQ = $this->base($this->periode)
+            ->select('d.id as did', 'sd.id as sid', 'sab.id as kid', DB::raw('SUM(ju.kredit) as total'))
+            ->groupBy('d.id', 'sd.id', 'sab.id')->get();
+        $real = [];
+        foreach ($tokoQ as $x) {
+            $real[$x->did][$x->sid][$x->kid] = (float) $x->total;
+        }
+        $allToko = DB::table('sub_divisions')->whereIn('division_id', $divs->pluck('id'))->orderBy('name')->get(['id', 'name', 'division_id']);
+        $tokoBudget = $this->periode->budgetMap('sub_divisi_budgets', 'sub_divisi_id', $allToko->pluck('id')->all(), $akunAll->pluck('id')->all());
+        $used = ['Ringkasan', 'Semua Divisi', 'Data', 'Panduan'];
+        foreach ($divs as $d) {
+            $tokos = $allToko->where('division_id', $d->id)
+                ->filter(fn ($t) => isset($real[$d->id][$t->id]) || collect($tokoBudget)->contains(fn ($perToko) => isset($perToko[$t->id])))
+                ->values();
+            $akunDiv = $akunAll->filter(fn ($a) => isset($m['cells'][$a->id]['_'][$d->id]) || isset($m['budget'][$a->id][$d->id]))
+                ->map(function ($a) use ($m, $d) {
+                    $c = clone $a;
+                    $c->subs = collect($a->subs)->filter(fn ($s) => isset($m['cells'][$a->id][$s->id][$d->id]))->values();
+                    return $c;
+                })->values();
+            $name = $this->sheetName($d->name, $used);
+            $used[] = $name;
+            $this->sheetBlok($book->createSheet(), $name, 'Toko', $tokos, $akunDiv,
+                function ($a, $s, $t) use ($real, $d) {
+                    if ($s !== null) {
+                        return $real[$d->id][$t->id][$s->id] ?? 0;
+                    }
+                    return array_sum(array_intersect_key($real[$d->id][$t->id] ?? [], collect($a->subs)->keyBy('id')->all()));
+                },
+                fn ($a, $t) => $tokoBudget[$a->id][$t->id] ?? null,
+                fn ($a) => ($m['budget'][$a->id][$d->id] ?? 0) > 0 ? $m['budget'][$a->id][$d->id] : null,
+                'Divisi: '.$d->name);
+        }
     }
 
-    private function sheetMatriks(Worksheet $ws, array $m): void
+    /** Nama sheet yang sah (maks 31 karakter, tanpa []:*?/\) dan belum dipakai. */
+    private function sheetName(string $name, array $used): string
     {
-        $ws->setTitle('Akun × Divisi');
-        $divs = $m['divisions']->values();
-        $nd = $divs->count();
-        $colD = fn ($i) => 3 + $i * 3;
-        $colT = 3 + $nd * 3;
-        $lastL = $this->L($colT + 2);
-        $this->judulPeriode($ws, 'Realisasi vs budget per akun dan divisi', $lastL);
+        $base = mb_substr(trim(preg_replace('/[\[\]:*?\/\\\\]+/', ' ', $name)) ?: 'Divisi', 0, 28);
+        $out = $base;
+        $i = 2;
+        while (in_array(mb_strtolower($out), array_map('mb_strtolower', $used), true)) {
+            $out = $base.' '.$i++;
+        }
+        return $out;
+    }
+
+    /**
+     * Format laporan blok per akun, seperti laporan manual:
+     *   AKUN (judul) → baris kategori → Total AKUN → Budget → Selisih → % Serapan,
+     *   lalu Grand Total, Grand Budget, Grand Selisih di bawah.
+     * Kolom = divisi atau toko, kolom terakhir = Total.
+     *
+     * @param  callable  $real         fn($akun, $kategori|null, $kolom) => realisasi
+     * @param  callable  $budget       fn($akun, $kolom) => budget|null
+     * @param  callable|null  $budgetTotal  fn($akun) => budget kolom Total (null = jumlah kolom)
+     */
+    private function sheetBlok(Worksheet $ws, string $title, string $kolomLabel, Collection $cols, Collection $akunList, callable $real, callable $budget, ?callable $budgetTotal, ?string $subjudul = null): void
+    {
+        $NUM = '#,##0.00;[Red]-#,##0.00;""';
+        $ws->setTitle($title);
+        $ws->setShowGridlines(false);
+        $nc = $cols->count();
+        $cTot = 2 + $nc;
+        $lastL = $this->L($cTot);
+        $this->judulPeriode($ws, 'Realisasi vs budget per akun'.($subjudul ? ' — '.$subjudul : ''), $lastL);
 
         $h1 = 5;
         $h2 = 6;
-        $ws->setCellValue("A$h1", 'Akun / kategori')->mergeCells("A$h1:A$h2");
-        $ws->setCellValue("B$h1", 'Tingkat')->mergeCells("B$h1:B$h2");
-        foreach ($divs as $i => $d) {
-            $c = $colD($i);
-            $ws->setCellValue($this->L($c).$h1, $d->name)->mergeCells($this->L($c).$h1.':'.$this->L($c + 2).$h1);
-            $ws->fromArray(['Realisasi', 'Budget', '% Serapan'], null, $this->L($c).$h2);
+        $ws->setCellValue("A$h1", 'Biaya')->mergeCells("A$h1:A$h2");
+        if ($nc > 0) {
+            $ws->setCellValue("B$h1", $kolomLabel)->mergeCells("B$h1:".$this->L(1 + $nc).$h1);
         }
-        $ws->setCellValue($this->L($colT).$h1, 'TOTAL')->mergeCells($this->L($colT).$h1.':'.$lastL.$h1);
-        $ws->fromArray(['Realisasi', 'Budget', '% Serapan'], null, $this->L($colT).$h2);
+        foreach ($cols->values() as $i => $c) {
+            $ws->setCellValue($this->L(2 + $i).$h2, $c->name);
+        }
+        $ws->setCellValue("$lastL$h1", 'Total')->mergeCells("$lastL$h1:$lastL$h2");
         $this->styleHeader($ws, "A$h1:$lastL$h2");
-        $ws->getStyle($this->L($colT).$h1.":$lastL$h2")->getFill()->getStartColor()->setRGB('BFDBFE');
+        $ws->getStyle("A$h1:$lastL$h2")->getFill()->getStartColor()->setRGB('D9E1F2');
+        $ws->getRowDimension($h2)->setRowHeight(28);
 
+        $sumRow = fn ($r) => $nc > 0 ? '=SUM(B'.$r.':'.$this->L(1 + $nc).$r.')' : 0;
         $r = $h2;
-        foreach ($m['akun'] as $a) {
+        $totalRows = [];
+        $budgetRows = [];
+        foreach ($akunList as $a) {
+            // Judul akun
             $r++;
-            $this->matriksRow($ws, $r, $a->name, 'Akun', $divs, $colD, $colT,
-                fn ($d) => $m['cells'][$a->id]['_'][$d->id] ?? 0, fn ($d) => $m['budget'][$a->id][$d->id] ?? 0);
-            $ws->getStyle("A$r:$lastL$r")->getFont()->setBold(true);
-            $ws->getStyle("A$r:$lastL$r")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB(static::$C_SUB);
+            $ws->setCellValue("A$r", mb_strtoupper($a->name));
+            $ws->getStyle("A$r:$lastL$r")->getFont()->setBold(true)->getColor()->setRGB('1E3A8A');
+            $ws->getStyle("A$r:$lastL$r")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('EEF2FF');
+            $firstSub = $r + 1;
             foreach ($a->subs as $s) {
                 $r++;
-                $this->matriksRow($ws, $r, '    '.$s->name, 'Kategori', $divs, $colD, $colT,
-                    fn ($d) => $m['cells'][$a->id][$s->id][$d->id] ?? 0, null);
+                $ws->setCellValueExplicit("A$r", $s->name, DataType::TYPE_STRING);
+                foreach ($cols->values() as $i => $c) {
+                    $v = $real($a, $s, $c);
+                    if ($v != 0) {
+                        $ws->setCellValue($this->L(2 + $i).$r, round($v, 2));
+                    }
+                }
+                $ws->setCellValue("$lastL$r", $sumRow($r));
                 $ws->getRowDimension($r)->setOutlineLevel(1);
-                $ws->getStyle("A$r:$lastL$r")->getFont()->getColor()->setRGB('475569');
             }
-        }
-        $first = $h2 + 1;
-        $last = max($first, $r);
-        $t = $last + 1;
-        $ws->setCellValue("A$t", 'TOTAL');
-        for ($c = 3; $c <= $colT + 2; $c += 3) {
-            foreach ([0, 1] as $k) {
-                $col = $this->L($c + $k);
-                $ws->setCellValue("$col$t", "=SUMIF(\$B\$$first:\$B\$$last,\"Akun\",$col$first:$col$last)");
+            $lastSub = $r;
+            // Total akun
+            $r++;
+            $tRow = $r;
+            $ws->setCellValue("A$r", 'Total '.mb_strtoupper($a->name));
+            foreach ($cols->values() as $i => $c) {
+                $col = $this->L(2 + $i);
+                $ws->setCellValue("$col$r", $lastSub >= $firstSub ? "=SUM($col$firstSub:$col$lastSub)" : round($real($a, null, $c), 2));
             }
-            $rc = $this->L($c).$t;
-            $bc = $this->L($c + 1).$t;
-            $ws->setCellValue($this->L($c + 2).$t, "=IF($bc>0,$rc/$bc,\"\")");
+            $ws->setCellValue("$lastL$r", $sumRow($r));
+            // Budget
+            $r++;
+            $bRow = $r;
+            $ws->setCellValue("A$r", 'Budget');
+            foreach ($cols->values() as $i => $c) {
+                $b = $budget($a, $c);
+                if ($b) {
+                    $ws->setCellValue($this->L(2 + $i).$r, round($b, 2));
+                }
+            }
+            $bt = $budgetTotal ? $budgetTotal($a) : null;
+            $ws->setCellValue("$lastL$r", $bt !== null ? round($bt, 2) : $sumRow($r));
+            // Selisih
+            $r++;
+            $ws->setCellValue("A$r", 'Selisih');
+            for ($c = 2; $c <= $cTot; $c++) {
+                $col = $this->L($c);
+                $ws->setCellValue("$col$r", "=IF(AND($col$bRow=\"\",$col$tRow=0),\"\",N($col$bRow)-N($col$tRow))");
+            }
+            // % Serapan
+            $r++;
+            $ws->setCellValue("A$r", '% Serapan');
+            for ($c = 2; $c <= $cTot; $c++) {
+                $col = $this->L($c);
+                $ws->setCellValue("$col$r", "=IF(N($col$bRow)>0,$col$tRow/$col$bRow,IF(N($col$tRow)>0,\"tanpa budget\",\"\"))");
+            }
+            $ws->getStyle("A$tRow:$lastL".($r - 1))->getFont()->setBold(true);
+            $ws->getStyle("A$tRow:$lastL$tRow")->getBorders()->getTop()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN)->getColor()->setRGB('64748B');
+            $ws->getStyle("A$r:$lastL$r")->getFont()->setItalic(true)->setSize(9)->getColor()->setRGB('475569');
+            $ws->getStyle("B$r:$lastL$r")->getNumberFormat()->setFormatCode(static::$PCT);
+            $ws->getStyle("B$r:$lastL$r")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+            $this->serapanRules($ws, "B$r:$lastL$r");
+            $this->perubahanRulesTerbalik($ws, 'B'.($r - 1).":$lastL".($r - 1));
+            $totalRows[] = $tRow;
+            $budgetRows[] = $bRow;
+            // Baris kosong pemisah antar akun
+            $r++;
         }
-        $this->totalRow($ws, "A$t:$lastL$t");
-        for ($c = 3; $c <= $colT; $c += 3) {
-            $ws->getStyle($this->L($c).$first.':'.$this->L($c + 1).$t)->getNumberFormat()->setFormatCode(static::$RP);
-            $ws->getStyle($this->L($c + 2).$first.':'.$this->L($c + 2).$t)->getNumberFormat()->setFormatCode(static::$PCT);
-            $this->serapanRules($ws, $this->L($c + 2).$first.':'.$this->L($c + 2).$last);
-            $this->setWidths($ws, [$this->L($c) => 15, $this->L($c + 1) => 15, $this->L($c + 2) => 10]);
+
+        // Grand total
+        $g = $r + 1;
+        $labels = ['Grand Total', 'Grand Budget', 'Grand Selisih', '% Serapan'];
+        foreach ($labels as $k => $label) {
+            $ws->setCellValue('A'.($g + $k), $label);
         }
-        $this->dataBar($ws, $this->L($colT).$first.':'.$this->L($colT).$last);
-        $this->gridBorders($ws, "A$h1:$lastL$t");
-        $this->setWidths($ws, ['A' => 34, 'B' => 10]);
-        $ws->setAutoFilter("A$h2:$lastL$last");
-        $ws->freezePane('C'.$first);
+        for ($c = 2; $c <= $cTot; $c++) {
+            $col = $this->L($c);
+            $ws->setCellValue("$col$g", $totalRows ? '='.implode('+', array_map(fn ($x) => "N($col$x)", $totalRows)) : 0);
+            $ws->setCellValue("$col".($g + 1), $budgetRows ? '='.implode('+', array_map(fn ($x) => "N($col$x)", $budgetRows)) : 0);
+            $ws->setCellValue("$col".($g + 2), "=$col".($g + 1)."-$col$g");
+            $ws->setCellValue("$col".($g + 3), "=IF($col".($g + 1).">0,$col$g/$col".($g + 1).",\"\")");
+        }
+        $ws->getStyle("A$g:$lastL$g")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('FFFF00');
+        $ws->getStyle("A$g:$lastL".($g + 2))->getFont()->setBold(true);
+        $ws->getStyle('A'.($g + 1).":$lastL".($g + 2))->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('FFF9C4');
+        $ws->getStyle('B'.($g + 3).":$lastL".($g + 3))->getNumberFormat()->setFormatCode(static::$PCT);
+        $ws->getStyle('A'.($g + 3).":$lastL".($g + 3))->getFont()->setItalic(true)->setBold(true);
+        $this->serapanRules($ws, 'B'.($g + 3).":$lastL".($g + 3));
+        $this->perubahanRulesTerbalik($ws, 'B'.($g + 2).":$lastL".($g + 2));
+        $end = $g + 3;
+
+        $ws->getStyle("B".($h2 + 1).":$lastL".($g + 2))->getNumberFormat()->setFormatCode($NUM);
+        // Pola % serapan per blok sudah diberi format sendiri; terapkan ulang setelah format angka umum.
+        foreach ($totalRows as $tRow) {
+            $ws->getStyle('B'.($tRow + 3).":$lastL".($tRow + 3))->getNumberFormat()->setFormatCode(static::$PCT);
+        }
+        $ws->getStyle("$lastL".($h2 + 1).":$lastL$end")->getFont()->setBold(true);
+        $this->gridBorders($ws, "A$h1:$lastL$end");
+        $ws->getColumnDimension('A')->setWidth(34);
+        for ($c = 2; $c <= $cTot; $c++) {
+            $ws->getColumnDimension($this->L($c))->setWidth(18);
+        }
+        $catatan = $end + 2;
+        $ws->setCellValue("A$catatan", 'Selisih = Budget − Total (negatif/merah = melebihi budget). Klik tanda + / − di kiri untuk membuka atau melipat kategori.'
+            .($budgetTotal ? ' Kolom Total memakai budget divisi; kolom toko memakai budget toko.' : ''));
+        $ws->getStyle("A$catatan")->getFont()->setItalic(true)->setSize(9)->getColor()->setRGB('64748B');
+        $ws->freezePane('B'.($h2 + 1));
         $ws->setShowSummaryBelow(false);
-        $this->print($ws, PageSetup::ORIENTATION_LANDSCAPE, "$h1:$h2");
+        $this->print($ws, $nc > 4 ? PageSetup::ORIENTATION_LANDSCAPE : PageSetup::ORIENTATION_PORTRAIT, "$h1:$h2");
     }
 
-    private function matriksRow(Worksheet $ws, int $r, string $name, string $tingkat, Collection $divs, callable $colD, int $colT, callable $real, ?callable $budget): void
+    /** Untuk selisih budget − realisasi: negatif (lewat budget) merah, positif hijau. */
+    private function perubahanRulesTerbalik(Worksheet $ws, string $range): void
     {
-        $ws->setCellValueExplicit("A$r", $name, DataType::TYPE_STRING);
-        $ws->setCellValue("B$r", $tingkat);
-        $rs = [];
-        $bs = [];
-        foreach ($divs as $i => $d) {
-            $c = $colD($i);
-            $rc = $this->L($c).$r;
-            $bc = $this->L($c + 1).$r;
-            $ws->setCellValue($rc, round($real($d), 2));
-            $rs[] = $rc;
-            if ($budget) {
-                $ws->setCellValue($bc, round($budget($d), 2));
-                $ws->setCellValue($this->L($c + 2).$r, "=IF($bc>0,$rc/$bc,IF($rc>0,\"tanpa budget\",\"\"))");
-                $bs[] = $bc;
-            }
-        }
-        $tr = $this->L($colT).$r;
-        $tb = $this->L($colT + 1).$r;
-        $ws->setCellValue($tr, $rs ? '=SUM('.implode(',', $rs).')' : 0);
-        if ($budget) {
-            $ws->setCellValue($tb, $bs ? '=SUM('.implode(',', $bs).')' : 0);
-            $ws->setCellValue($this->L($colT + 2).$r, "=IF($tb>0,$tr/$tb,IF($tr>0,\"tanpa budget\",\"\"))");
-        }
+        $first = explode(':', $range)[0];
+        $neg = new \PhpOffice\PhpSpreadsheet\Style\Conditional();
+        $neg->setConditionType(\PhpOffice\PhpSpreadsheet\Style\Conditional::CONDITION_EXPRESSION)->addCondition("AND(ISNUMBER($first),$first<0)");
+        $neg->getStyle()->getFont()->getColor()->setRGB('DC2626');
+        $neg->getStyle()->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('FEE2E2');
+        $neg->getStyle()->getFill()->getEndColor()->setRGB('FEE2E2');
+        $pos = new \PhpOffice\PhpSpreadsheet\Style\Conditional();
+        $pos->setConditionType(\PhpOffice\PhpSpreadsheet\Style\Conditional::CONDITION_EXPRESSION)->addCondition("AND(ISNUMBER($first),$first>0)");
+        $pos->getStyle()->getFont()->getColor()->setRGB('15803D');
+        $ws->getStyle($range)->setConditionalStyles([$neg, $pos]);
     }
 
     // ============================================================ Per toko
@@ -707,8 +825,9 @@ class LaporanWorkbook
             'ringkasan' => [
                 ['Ringkasan', true],
                 ['Angka utama periode ini, tabel per divisi (realisasi, budget, % serapan, sisa, porsi, status), grafik, dan pos dengan serapan tertinggi.', false],
-                ['Akun × Divisi', true],
-                ['Baris tebal = akun dengan budget. Kategori ada di bawahnya dan bisa dilipat (tanda + / − di kiri). Kolom TOTAL di kanan.', false],
+                ['Semua Divisi dan sheet per divisi', true],
+                ['Format blok per akun seperti laporan manual: judul akun, baris kategori, lalu Total, Budget, Selisih (budget − total), dan % Serapan. Di bawah: Grand Total, Grand Budget, Grand Selisih.', false],
+                ['Sheet "Semua Divisi" berkolom divisi. Sheet bernama divisi berkolom toko; kolom Total memakai budget divisi, kolom toko memakai budget toko.', false],
             ],
             'toko' => [
                 ['Per Toko', true],
