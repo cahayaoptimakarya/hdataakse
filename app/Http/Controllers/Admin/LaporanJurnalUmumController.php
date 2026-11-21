@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Exports\LaporanDivisiExport;
 use App\Exports\LaporanExport;
 use App\Models\SubAkunBiaya;
+use App\Support\Periode;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
@@ -61,7 +62,17 @@ class LaporanJurnalUmumController extends Controller
                 'ab.name as akun_name',
             ]);
 
+        $periode = Periode::fromRequest($request);
+        $undatedCount = $periode->isSemua()
+            ? 0
+            : DB::table('jurnal_umum')->whereNull('tanggal')->count();
+
         return view('admin.keuangan.laporan-jurnal-umum.index', [
+            'periode' => $periode,
+            'tahun_options' => Periode::tahunOptions(),
+            'nama_bulan' => Periode::NAMA_BULAN,
+            'undated_count' => $undatedCount,
+            'budget_editable' => !$periode->isSemua() && $periode->jumlahBulan() === 12,
             'divisions' => $report['divisions'],
             'akun_groups' => $report['akun_groups'],
             'grand_by_division' => $report['grand_by_division'],
@@ -168,6 +179,8 @@ class LaporanJurnalUmumController extends Controller
         if (!empty($selectedDivisionIds)) {
             $query->whereIn('d.id', $selectedDivisionIds);
         }
+        $periode = Periode::fromRequest($request);
+        $periode->applyToJurnal($query);
 
         $rows = $query->get();
 
@@ -190,6 +203,7 @@ class LaporanJurnalUmumController extends Controller
         if (!empty($selectedDivisionIds)) {
             $summaryQuery->whereIn('d.id', $selectedDivisionIds);
         }
+        $periode->applyToJurnal($summaryQuery);
 
         $summaryRows = $summaryQuery->get();
 
@@ -207,25 +221,39 @@ class LaporanJurnalUmumController extends Controller
         ]);
     }
 
+    /**
+     * Simpan budget tahunan sub divisi × akun dari halaman laporan.
+     * Hanya untuk periode satu tahun penuh (tampilan laporan = nilai tahunan).
+     */
     public function saveSubDivisiBudget(Request $request)
     {
         $validated = $request->validate([
             'sub_divisi_id' => ['required', 'integer', 'exists:sub_divisions,id'],
             'akun_biaya_id' => ['required', 'integer', 'exists:akun_biaya,id'],
+            'tahun' => ['required', 'integer', 'min:2000', 'max:2100'],
             'amount' => ['nullable', 'numeric', 'min:0'],
         ]);
 
+        $subDivisiId = (int) $validated['sub_divisi_id'];
+        $akunBiayaId = (int) $validated['akun_biaya_id'];
+        $tahun = (int) $validated['tahun'];
+        $amount = $validated['amount'] ?? null;
+
+        $base = fn () => DB::table('sub_divisi_budgets')
+            ->where('sub_divisi_id', $subDivisiId)
+            ->where('akun_biaya_id', $akunBiayaId)
+            ->where('tahun', $tahun);
+
+        if ($base()->whereNotNull('bulan')->exists()) {
+            return response()->json([
+                'message' => 'Sub divisi dan akun ini memakai budget bulanan di tahun '.$tahun.', jadi tidak bisa diubah dari sini.',
+            ], 422);
+        }
+
         DB::beginTransaction();
         try {
-            $subDivisiId = (int) $validated['sub_divisi_id'];
-            $akunBiayaId = (int) $validated['akun_biaya_id'];
-            $amount = $validated['amount'];
-
             if ($amount === null || $amount === '') {
-                DB::table('sub_divisi_budgets')
-                    ->where('sub_divisi_id', $subDivisiId)
-                    ->where('akun_biaya_id', $akunBiayaId)
-                    ->delete();
+                $base()->whereNull('bulan')->delete();
                 DB::commit();
 
                 return response()->json([
@@ -235,23 +263,17 @@ class LaporanJurnalUmumController extends Controller
             }
 
             $now = now();
-            $exists = DB::table('sub_divisi_budgets')
-                ->where('sub_divisi_id', $subDivisiId)
-                ->where('akun_biaya_id', $akunBiayaId)
-                ->exists();
-
-            if ($exists) {
-                DB::table('sub_divisi_budgets')
-                    ->where('sub_divisi_id', $subDivisiId)
-                    ->where('akun_biaya_id', $akunBiayaId)
-                    ->update([
-                        'amount' => $amount,
-                        'updated_at' => $now,
-                    ]);
+            if ($base()->whereNull('bulan')->exists()) {
+                $base()->whereNull('bulan')->update([
+                    'amount' => $amount,
+                    'updated_at' => $now,
+                ]);
             } else {
                 DB::table('sub_divisi_budgets')->insert([
                     'sub_divisi_id' => $subDivisiId,
                     'akun_biaya_id' => $akunBiayaId,
+                    'tahun' => $tahun,
+                    'bulan' => null,
                     'amount' => $amount,
                     'created_at' => $now,
                     'updated_at' => $now,
@@ -333,6 +355,8 @@ class LaporanJurnalUmumController extends Controller
         if (!empty($selectedAkunIds)) {
             $rowsQuery->whereIn('ab.id', $selectedAkunIds);
         }
+        $periode = Periode::fromRequest($request);
+        $periode->applyToJurnal($rowsQuery);
 
         $rows = $rowsQuery->get();
 
@@ -405,18 +429,7 @@ class LaporanJurnalUmumController extends Controller
         $divisionIds = $divisions->pluck('id')->all();
         $akunIds = $akunGroups->pluck('akun_id')->all();
 
-        $budgetRows = [];
-        if (!empty($divisionIds) && !empty($akunIds)) {
-            $budgetRows = DB::table('budgets')
-                ->whereIn('division_id', $divisionIds)
-                ->whereIn('akun_biaya_id', $akunIds)
-                ->get(['division_id', 'akun_biaya_id', 'amount']);
-        }
-
-        $budgetMap = [];
-        foreach ($budgetRows as $row) {
-            $budgetMap[$row->akun_biaya_id][$row->division_id] = (float) $row->amount;
-        }
+        $budgetMap = $periode->budgetMap('budgets', 'division_id', $divisionIds, $akunIds);
 
         return [
             'divisions' => $divisions,
@@ -545,22 +558,14 @@ class LaporanJurnalUmumController extends Controller
         if (!empty($selectedSubAkunIds)) {
             $rowsQuery->whereIn('sab.id', $selectedSubAkunIds);
         }
+        $periode = Periode::fromRequest($request);
+        $periode->applyToJurnal($rowsQuery);
 
         $rows = $rowsQuery->get();
 
         $akunIds = $rows->pluck('akun_id')->unique()->values()->all();
         $subDivisiIds = $rows->pluck('sub_divisi_id')->unique()->values()->all();
-        $budgetRows = [];
-        if (!empty($subDivisiIds) && !empty($akunIds)) {
-            $budgetRows = DB::table('sub_divisi_budgets')
-                ->whereIn('sub_divisi_id', $subDivisiIds)
-                ->whereIn('akun_biaya_id', $akunIds)
-                ->get(['sub_divisi_id', 'akun_biaya_id', 'amount']);
-        }
-        $budgetMap = [];
-        foreach ($budgetRows as $row) {
-            $budgetMap[$row->akun_biaya_id][$row->sub_divisi_id] = (float) $row->amount;
-        }
+        $budgetMap = $periode->budgetMap('sub_divisi_budgets', 'sub_divisi_id', $subDivisiIds, $akunIds);
 
         $divisionGroups = $rows->groupBy('division_id')
             ->map(function ($divisionRows) {

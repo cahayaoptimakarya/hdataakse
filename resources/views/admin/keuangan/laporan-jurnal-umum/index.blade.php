@@ -31,12 +31,28 @@
             </li>
         </ul>
 
+        <div class="d-flex flex-wrap align-items-center gap-3 mb-5">
+            <span class="badge badge-light-primary fs-6 px-4 py-3">Periode: {{ $periode->label() }}</span>
+            @if(!$periode->isSemua() && $periode->jumlahBulan() < 12)
+                <span class="text-muted fs-7">Budget tahunan dihitung sebanding: {{ $periode->jumlahBulan() }}/12 dari nilai setahun.</span>
+            @endif
+        </div>
+        @if($undated_count > 0)
+            <div class="alert alert-warning d-flex flex-wrap align-items-center gap-3 mb-5">
+                <div class="flex-grow-1">
+                    Ada <strong>{{ number_format($undated_count, 0, ',', '.') }}</strong> baris jurnal lama yang belum punya tanggal, sehingga tidak ikut dihitung di periode ini.
+                </div>
+                <a href="{{ route('admin.keuangan.laporan.index', array_merge(request()->except(['tahun', 'bulan_dari', 'bulan_sampai']), ['tahun' => 'semua'])) }}" class="btn btn-sm btn-warning">Tampilkan semua periode</a>
+            </div>
+        @endif
+
         <div class="tab-content">
             <div class="tab-pane fade @if($activeTab === 'ringkasan') show active @endif" id="laporan_ringkasan" role="tabpanel">
                 <form method="GET" class="mb-5">
                     <input type="hidden" name="tab" value="ringkasan">
                     <div class="p-4 bg-light rounded">
                         <div class="row g-3 align-items-end">
+                            @include('admin.keuangan.laporan-jurnal-umum._periode')
                             <div class="col-12 col-md-6 col-lg-4">
                                 <label class="form-label fw-bold">Divisi</label>
                                 <select name="division_ids[]" class="form-select form-select-solid" multiple data-control="select2" data-placeholder="Pilih divisi">
@@ -202,10 +218,14 @@
             </div>
 
             <div class="tab-pane fade @if($activeTab === 'divisi') show active @endif" id="laporan_divisi" role="tabpanel">
+                @unless($budget_editable)
+                    <div class="text-muted fs-7 mb-3">Budget sub divisi bisa diubah dari halaman ini saat periode yang dipilih satu tahun penuh (Januari – Desember).</div>
+                @endunless
                 <form method="GET" class="mb-5">
                     <input type="hidden" name="tab" value="divisi">
                     <div class="p-4 bg-light rounded">
                         <div class="row g-3 align-items-end">
+                            @include('admin.keuangan.laporan-jurnal-umum._periode')
                             <div class="col-12 col-md-6 col-lg-3">
                                 <label class="form-label fw-bold">Divisi</label>
                                 <select name="division_ids_divisi[]" class="form-select form-select-solid" multiple data-control="select2" data-placeholder="Pilih divisi">
@@ -362,9 +382,11 @@
                                                     >
                                                         <div class="d-flex justify-content-end align-items-center gap-2">
                                                             <span class="budget-value-divisi">-</span>
+                                                            @if($budget_editable)
                                                             <button type="button" class="btn btn-icon btn-sm btn-light budget-edit-btn-divisi" data-akun="{{ $akunGroup['akun_id'] }}" data-sub-divisi="{{ $subDiv['id'] }}" data-division="{{ $division['division_id'] }}" title="Edit budget">
                                                                 <i class="fa-solid fa-pen"></i>
                                                             </button>
+                                                            @endif
                                                         </div>
                                                     </td>
                                                 @endforeach
@@ -573,6 +595,14 @@
     const subDivisiBudgetUrl = '{{ route('admin.keuangan.laporan.sub-divisi-budget') }}';
 
     document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.periode-tahun').forEach((sel) => {
+            sel.addEventListener('change', () => {
+                const form = sel.closest('form');
+                form?.querySelectorAll('select[name="bulan_dari"], select[name="bulan_sampai"]').forEach((m) => {
+                    m.disabled = sel.value === 'semua';
+                });
+            });
+        });
         const formatRupiah = (value) => {
             const num = Number(value ?? 0);
             const safe = Number.isFinite(num) ? num : 0;
@@ -683,6 +713,7 @@
                 body: JSON.stringify({
                     sub_divisi_id: subDivisiId,
                     akun_biaya_id: akunId,
+                    tahun: {{ (int) ($periode->tahun ?? now()->year) }},
                     amount,
                 }),
             });

@@ -12,8 +12,23 @@ class Budget extends Model
     protected $fillable = [
         'division_id',
         'akun_biaya_id',
+        'tahun',
+        'bulan',
         'amount',
     ];
+
+    protected $casts = [
+        'tahun' => 'integer',
+        'bulan' => 'integer',
+    ];
+
+    public function periodeLabel(): string
+    {
+        if ($this->bulan) {
+            return (\App\Support\Periode::NAMA_BULAN[$this->bulan] ?? $this->bulan).' '.$this->tahun;
+        }
+        return 'Tahunan '.$this->tahun;
+    }
 
     public function division()
     {
