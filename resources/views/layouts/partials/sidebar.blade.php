@@ -18,7 +18,7 @@
     };
 @endphp
 <aside class="ui-side" id="ui_side">
-    <a href="{{ route('admin.dashboard') }}" class="ui-logo"><i>KB</i>Kontrol Biaya</a>
+    <a href="{{ route('admin.dashboard') }}" class="ui-logo"><img src="{{ asset('metronic/media/logos/logo-mark.png') }}" alt="Logo">Kontrol Biaya</a>
     @foreach($allMenus->whereNull('parent_id') as $top)
         @php
             $children = $allMenus->where('parent_id', $top->id)->filter(fn ($c) => $allowed->contains($c->id) && $c->route && RouteFacade::has($c->route));
