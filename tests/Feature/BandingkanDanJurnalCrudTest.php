@@ -115,7 +115,7 @@ class BandingkanDanJurnalCrudTest extends TestCase
     public function test_excel_export_for_every_tab(): void
     {
         $expected = [
-            'ringkasan' => ['Ringkasan', 'Akun × Divisi', 'Data', 'Panduan'],
+            'ringkasan' => ['Ringkasan', 'Semua Divisi', 'Retail', 'Data', 'Panduan'],
             'toko' => ['Per Toko', 'Data', 'Panduan'],
             'tren' => ['Tren 2026', 'Data', 'Panduan'],
             'lewat' => ['Status Pos', 'Data', 'Panduan'],
@@ -142,5 +142,15 @@ class BandingkanDanJurnalCrudTest extends TestCase
         $this->assertEqualsWithDelta(1.2, $ws->getCell('E9')->getCalculatedValue(), 0.0001);
         $this->assertSame('Lewat budget', $ws->getCell('H9')->getCalculatedValue());
         $this->assertTrue(AuditLog::where('action', 'export')->exists());
+
+        // Sheet per divisi: blok akun dengan Total, Budget, Selisih.
+        $div = \PhpOffice\PhpSpreadsheet\IOFactory::load($path)->getSheetByName('Retail');
+        $this->assertSame('Toko A', $div->getCell('B6')->getValue());
+        $this->assertSame('OPERASIONAL', $div->getCell('A7')->getValue());
+        $this->assertSame('Listrik', $div->getCell('A8')->getValue());
+        $this->assertSame('Total OPERASIONAL', $div->getCell('A9')->getValue());
+        $this->assertEquals(120000, $div->getCell('C9')->getCalculatedValue());
+        $this->assertEquals(100000, $div->getCell('C10')->getCalculatedValue()); // budget divisi di kolom Total
+        $this->assertEquals(-20000, $div->getCell('C11')->getCalculatedValue());
     }
 }
