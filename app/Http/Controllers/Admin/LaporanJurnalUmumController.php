@@ -3,18 +3,21 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Exports\LaporanDivisiExport;
-use App\Exports\LaporanExport;
+use App\Exports\Laporan\BandingkanExport;
+use App\Exports\Laporan\LaporanWorkbook;
 use App\Services\CostReport;
 use App\Support\Audit;
 use App\Support\Periode;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class LaporanJurnalUmumController extends Controller
 {
-    public const TABS = ['ringkasan', 'toko', 'tren', 'lewat'];
+    public const TABS = ['ringkasan', 'toko', 'tren', 'bandingkan', 'lewat'];
+
+    public const MAKS_PERIODE = 5;
 
     public function index(Request $request)
     {
@@ -52,11 +55,60 @@ class LaporanJurnalUmumController extends Controller
             $data['tren_tahun'] = $periode->tahun ?? (int) now()->year;
             $data['tren'] = CostReport::monthlyByAkun($data['tren_tahun'], $divisionIds, $akunIds);
             $data['tren_lalu'] = CostReport::monthlyRealisasi($data['tren_tahun'] - 1, $divisionIds, $akunIds);
+        } elseif ($tab === 'bandingkan') {
+            $data['kelompok'] = in_array($request->input('kelompok'), ['akun', 'divisi', 'toko'], true) ? $request->input('kelompok') : 'akun';
+            $data['periodes'] = $this->comparePeriodes($request, $periode);
+            $data['banding'] = CostReport::compare($data['periodes'], $data['kelompok'], $divisionIds, $akunIds);
         } else {
             $data += $this->tokoTabData($request);
         }
 
         return view('admin.keuangan.laporan-jurnal-umum.index', $data);
+    }
+
+    /**
+     * Periode untuk tab Bandingkan. Periode pertama = filter utama; sisanya dari parameter banding[] ("2025-1-12").
+     * Tanpa banding[], dipakai periode yang sama tahun lalu dan periode sebelumnya dengan panjang yang sama.
+     *
+     * @return Periode[]
+     */
+    private function comparePeriodes(Request $request, Periode $utama): array
+    {
+        if ($utama->isSemua()) {
+            $utama = new Periode((int) now()->year, 1, (int) now()->month);
+        }
+        $list = [$utama];
+        $input = $request->input('banding');
+        if (is_array($input) || $request->boolean('banding_set')) {
+            foreach ((array) $input as $raw) {
+                if (preg_match('/^(\d{4})-(\d{1,2})-(\d{1,2})$/', (string) $raw, $m)) {
+                    $tahun = (int) $m[1];
+                    $dari = min(12, max(1, (int) $m[2]));
+                    $sampai = min(12, max(1, (int) $m[3]));
+                    if ($tahun >= 2000 && $tahun <= 2100) {
+                        $list[] = new Periode($tahun, min($dari, $sampai), max($dari, $sampai));
+                    }
+                }
+            }
+        } else {
+            $len = $utama->jumlahBulan();
+            if ($utama->bulanDari - $len >= 1) {
+                $list[] = new Periode($utama->tahun, $utama->bulanDari - $len, $utama->bulanDari - 1);
+            }
+            $list[] = new Periode($utama->tahun - 1, $utama->bulanDari, $utama->bulanSampai);
+        }
+
+        // Buang duplikat, batasi jumlah.
+        $seen = [];
+        $out = [];
+        foreach ($list as $p) {
+            $k = $p->tahun.'-'.$p->bulanDari.'-'.$p->bulanSampai;
+            if (!isset($seen[$k])) {
+                $seen[$k] = true;
+                $out[] = $p;
+            }
+        }
+        return array_slice($out, 0, self::MAKS_PERIODE);
     }
 
     private function ids(Request $request, string $key): array
@@ -187,33 +239,41 @@ class LaporanJurnalUmumController extends Controller
         ]);
     }
 
+    /** Export Excel untuk tab yang sedang dibuka (ringkasan, toko, tren, bandingkan, lewat). */
     public function export(Request $request)
     {
-        $report = $this->buildReportData($request);
+        $tab = $request->input('tab') === 'divisi' ? 'toko' : $request->input('tab');
+        $tab = in_array($tab, self::TABS, true) ? $tab : 'ringkasan';
+        $periode = Periode::fromRequest($request);
+        $divisionIds = $this->ids($request, 'division_ids');
+        $akunIds = $this->ids($request, 'akun_ids');
+        $user = $request->user()?->name;
 
-        $export = new LaporanExport([
-            'divisions' => $report['divisions'],
-            'akun_groups' => $report['akun_groups'],
-            'grand_by_division' => $report['grand_by_division'],
-            'grand_total_kredit' => $report['grand_total_kredit'],
-            'budget_map' => $report['budget_map'],
-        ]);
+        if ($tab === 'bandingkan') {
+            $periodes = $this->comparePeriodes($request, $periode);
+            $book = (new BandingkanExport($periodes, $divisionIds, $akunIds, $user))->build();
+            $filename = 'laporan-bandingkan-periode-'.now()->format('Ymd_His').'.xlsx';
+        } else {
+            $workbook = new LaporanWorkbook($tab, $periode, $divisionIds, $akunIds,
+                $tab === 'toko' ? $this->ids($request, 'sub_division_ids') : [],
+                $tab === 'toko' ? $this->ids($request, 'sub_akun_ids') : [], $user);
+            $book = $workbook->build();
+            $filename = $workbook->filename();
+        }
+        Audit::log('export', 'Laporan', null, 'Export Excel laporan tab '.$tab.' ('.$periode->label().')');
 
-        $filename = 'laporan-'.now()->format('Ymd_His').'.xlsx';
-        return Excel::download($export, $filename);
+        return response()->streamDownload(function () use ($book) {
+            $writer = new Xlsx($book);
+            $writer->setIncludeCharts(true);
+            $writer->save('php://output');
+        }, $filename, ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']);
     }
 
     public function exportDivisi(Request $request)
     {
-        $report = $this->buildDivisionDetailData($request);
+        $request->merge(['tab' => 'toko']);
 
-        $export = new LaporanDivisiExport([
-            'division_groups' => $report['division_groups'],
-            'budget_map' => $report['budget_map'],
-        ]);
-
-        $filename = 'laporan-per-divisi-'.now()->format('Ymd_His').'.xlsx';
-        return Excel::download($export, $filename);
+        return $this->export($request);
     }
 
     /**
@@ -296,153 +356,6 @@ class LaporanJurnalUmumController extends Controller
                 'error' => $e->getMessage(),
             ], 500);
         }
-    }
-
-    private function buildReportData(Request $request): array
-    {
-        $selectedDivisionIds = $request->input('division_ids', []);
-        if (!is_array($selectedDivisionIds)) {
-            $selectedDivisionIds = [$selectedDivisionIds];
-        }
-        $legacyDivisionId = $request->integer('division_id');
-        if ($legacyDivisionId > 0) {
-            $selectedDivisionIds[] = $legacyDivisionId;
-        }
-        $selectedDivisionIds = collect($selectedDivisionIds)
-            ->map(fn ($id) => (int) $id)
-            ->filter(fn ($id) => $id > 0)
-            ->unique()
-            ->values()
-            ->all();
-
-        $selectedAkunIds = $request->input('akun_ids', []);
-        if (!is_array($selectedAkunIds)) {
-            $selectedAkunIds = [$selectedAkunIds];
-        }
-        $legacyAkunId = $request->integer('akun_id');
-        if ($legacyAkunId > 0) {
-            $selectedAkunIds[] = $legacyAkunId;
-        }
-        $selectedAkunIds = collect($selectedAkunIds)
-            ->map(fn ($id) => (int) $id)
-            ->filter(fn ($id) => $id > 0)
-            ->unique()
-            ->values()
-            ->all();
-
-        $rowsQuery = DB::table('jurnal_umum as ju')
-            ->join('sub_divisions as sd', 'sd.id', '=', 'ju.sub_divisi_id')
-            ->join('divisions as d', 'd.id', '=', 'sd.division_id')
-            ->join('sub_akun_biaya as sab', 'sab.id', '=', 'ju.sub_akun_biaya_id')
-            ->join('akun_biaya as ab', 'ab.id', '=', 'sab.akun_biaya_id')
-            ->where('ab.dikecualikan', false)
-            ->select(
-                'd.id as division_id',
-                'd.name as division',
-                'ab.id as akun_id',
-                'ab.name as akun',
-                'sab.id as sub_akun_id',
-                'sab.name as sub_akun',
-                DB::raw('SUM(ju.debet) as total_debet'),
-                DB::raw('SUM(ju.kredit) as total_kredit')
-            )
-            ->groupBy('d.id', 'd.name', 'ab.id', 'ab.name', 'sab.id', 'sab.name')
-            ->orderBy('d.name')
-            ->orderBy('ab.name')
-            ->orderBy('sab.name');
-
-        if (!empty($selectedDivisionIds)) {
-            $rowsQuery->whereIn('d.id', $selectedDivisionIds);
-        }
-        if (!empty($selectedAkunIds)) {
-            $rowsQuery->whereIn('ab.id', $selectedAkunIds);
-        }
-        $periode = Periode::fromRequest($request);
-        $periode->applyToJurnal($rowsQuery);
-
-        $rows = $rowsQuery->get();
-
-        $divisionOptions = DB::table('divisions')
-            ->orderBy('name')
-            ->get(['id', 'name']);
-
-        if (!empty($selectedDivisionIds)) {
-            $divisions = $divisionOptions
-                ->whereIn('id', $selectedDivisionIds)
-                ->map(fn ($d) => ['id' => $d->id, 'name' => $d->name])
-                ->values();
-        } else {
-            $divisions = $rows->map(fn ($r) => ['id' => $r->division_id, 'name' => $r->division])
-                ->unique('id')
-                ->sortBy('name')
-                ->values();
-        }
-
-        $akunGroups = $rows->groupBy('akun_id')
-            ->sortBy(fn ($items) => $items->first()->akun)
-            ->map(function ($akunItems) use ($divisions) {
-                $subGroups = $akunItems->groupBy('sub_akun_id')
-                    ->sortBy(fn ($items) => $items->first()->sub_akun)
-                    ->map(function ($subItems) use ($divisions) {
-                        $byDivision = $subItems->keyBy('division_id');
-                        $cells = $divisions->map(function ($div) use ($byDivision) {
-                            $cell = $byDivision->get($div['id']);
-                            return [
-                                'debet' => (float) ($cell->total_debet ?? 0),
-                                'kredit' => (float) ($cell->total_kredit ?? 0),
-                            ];
-                        });
-
-                        return [
-                            'sub_akun_id' => (int) $subItems->first()->sub_akun_id,
-                            'sub_akun' => $subItems->first()->sub_akun,
-                            'cells' => $cells,
-                        ];
-                    })
-                    ->values();
-
-                $totalsByDivision = $divisions->mapWithKeys(function ($div) use ($akunItems) {
-                    return [
-                        $div['id'] => [
-                            'debet' => (float) $akunItems->where('division_id', $div['id'])->sum('total_debet'),
-                            'kredit' => (float) $akunItems->where('division_id', $div['id'])->sum('total_kredit'),
-                        ],
-                    ];
-                });
-
-                return [
-                    'akun_id' => (int) $akunItems->first()->akun_id,
-                    'akun' => $akunItems->first()->akun,
-                    'sub_groups' => $subGroups,
-                    'totals_by_division' => $totalsByDivision,
-                ];
-            })
-            ->values();
-
-        $grandByDivision = $divisions->mapWithKeys(function ($div) use ($rows) {
-            return [
-                $div['id'] => [
-                    'debet' => (float) $rows->where('division_id', $div['id'])->sum('total_debet'),
-                    'kredit' => (float) $rows->where('division_id', $div['id'])->sum('total_kredit'),
-                ],
-            ];
-        });
-
-        $divisionIds = $divisions->pluck('id')->all();
-        $akunIds = $akunGroups->pluck('akun_id')->all();
-
-        $budgetMap = $periode->budgetMap('budgets', 'division_id', $divisionIds, $akunIds);
-
-        return [
-            'divisions' => $divisions,
-            'akun_groups' => $akunGroups,
-            'grand_by_division' => $grandByDivision,
-            'grand_total_debet' => (float) $rows->sum('total_debet'),
-            'grand_total_kredit' => (float) $rows->sum('total_kredit'),
-            'budget_map' => $budgetMap,
-            'selected_division_ids' => $selectedDivisionIds,
-            'selected_akun_ids' => $selectedAkunIds,
-        ];
     }
 
     private function buildDivisionDetailData(Request $request): array
