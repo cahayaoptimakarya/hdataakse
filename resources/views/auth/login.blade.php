@@ -44,11 +44,8 @@
                         @csrf
                         <div class="text-center mb-10">
                             <h1 class="text-dark mb-3">{{ __('Sign In to') }} {{ config('app.name', 'Metronic') }}</h1>
-                            <div class="text-gray-400 fw-bold fs-4">
-                                {{ __('New here?') }}
-                                @if (Route::has('register'))
-                                    <a href="{{ route('register') }}" class="link-primary fw-bolder">{{ __('Create an account') }}</a>
-                                @endif
+                            <div class="text-gray-400 fw-bold fs-6">
+                                Belum punya akun? Hubungi admin.
                             </div>
                         </div>
 

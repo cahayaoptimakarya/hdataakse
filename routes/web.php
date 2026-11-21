@@ -6,8 +6,6 @@ use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\MenuController;
 use App\Http\Controllers\Admin\PermissionController;
-use App\Http\Controllers\Admin\ImportController;
-use App\Http\Controllers\Admin\DataController;
 use App\Http\Controllers\Admin\DivisionController;
 use App\Http\Controllers\Admin\AkunBiayaController;
 use App\Http\Controllers\Admin\BudgetController;
@@ -16,7 +14,7 @@ use App\Http\Controllers\Admin\LaporanJurnalUmumController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return view('welcome');
+    return redirect()->route(auth()->check() ? 'admin.dashboard' : 'login');
 });
 
 // Basic health check route for debugging blank page on '/'
@@ -40,20 +38,6 @@ require __DIR__.'/auth.php';
 Route::middleware(['auth', 'verified', 'menu.permission'])->prefix('admin')->as('admin.')->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
-    Route::prefix('import')->as('import.')->group(function () {
-        Route::get('/', [ImportController::class, 'index'])->name('index');
-        Route::post('/', [ImportController::class, 'store'])->name('store');
-        Route::delete('/all', [ImportController::class, 'destroyAll'])->name('destroy');
-        Route::post('/instan', [ImportController::class, 'storeInstan'])->name('instan');
-        Route::delete('/instan/all', [ImportController::class, 'destroyInstan'])->name('instan.destroy');
-        Route::post('/shipments', [ImportController::class, 'storeShipments'])->name('shipments');
-        Route::delete('/shipments/all', [ImportController::class, 'destroyShipments'])->name('shipments.destroy');
-    });
-
-    Route::get('/data', [DataController::class, 'index'])->name('data.index');
-    Route::get('/data/export', [DataController::class, 'export'])->name('data.export');
-    Route::get('/data/instan/export', [DataController::class, 'exportInstan'])->name('data.export-instan');
-    Route::get('/data/unintegrated/export', [DataController::class, 'exportUnintegrated'])->name('data.export-unintegrated');
 
     Route::prefix('masterdata')->as('masterdata.')->group(function () {
         // Users DataTables
@@ -71,18 +55,6 @@ Route::middleware(['auth', 'verified', 'menu.permission'])->prefix('admin')->as(
         // Menus CRUD
         Route::resource('menus', MenuController::class)->except(['show'])->names('menus');
 
-        // Categories (inheritance via parent)
-        Route::get('/categories/data', [\App\Http\Controllers\Admin\CategoryController::class, 'data'])->name('categories.data');
-        Route::resource('categories', \App\Http\Controllers\Admin\CategoryController::class)->except(['create','show','edit'])->names('categories');
-
-        // Items
-        Route::get('/items/data', [\App\Http\Controllers\Admin\ItemController::class, 'data'])->name('items.data');
-        Route::resource('items', \App\Http\Controllers\Admin\ItemController::class)->except(['create','show','edit'])->names('items');
-        Route::post('/items/import', [\App\Http\Controllers\Admin\ItemController::class, 'import'])->name('items.import');
-
-        // Stores
-        Route::get('/stores/data', [\App\Http\Controllers\Admin\StoreController::class, 'data'])->name('stores.data');
-        Route::resource('stores', \App\Http\Controllers\Admin\StoreController::class)->except(['create','show','edit'])->names('stores');
 
         // Permissions management
         Route::get('/permissions', [PermissionController::class, 'index'])->name('permissions.index');
