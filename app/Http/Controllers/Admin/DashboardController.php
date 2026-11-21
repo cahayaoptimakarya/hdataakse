@@ -38,8 +38,9 @@ class DashboardController extends Controller
             'warnCount' => $positions->filter(fn ($p) => CostReport::status($p->pct, $p->realisasi) === 'warn')->count(),
             'realisasiLalu' => $realisasiLalu,
             'monthly' => CostReport::monthly($periode->tahun),
+            'monthlyLalu' => CostReport::monthlyRealisasi($periode->tahun - 1),
             'budgetSetahun' => collect((new Periode($periode->tahun))->budgetMap(
-                'budgets', 'division_id', DB::table('divisions')->pluck('id')->all(), DB::table('akun_biaya')->where('id', '!=', 1)->whereRaw('LOWER(name) != ?', ['kas'])->pluck('id')->all()
+                'budgets', 'division_id', DB::table('divisions')->pluck('id')->all(), DB::table('akun_biaya')->where('dikecualikan', false)->pluck('id')->all()
             ))->flatten()->sum(),
             'batches' => JurnalImportBatch::with('user:id,name')->orderByDesc('id')->limit(6)->get(),
             'undatedCount' => DB::table('jurnal_umum')->whereNull('tanggal')->count(),

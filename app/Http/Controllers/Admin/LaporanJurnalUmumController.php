@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Exports\LaporanDivisiExport;
 use App\Exports\LaporanExport;
 use App\Services\CostReport;
+use App\Support\Audit;
 use App\Support\Periode;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -25,8 +26,7 @@ class LaporanJurnalUmumController extends Controller
         $akunIds = $this->ids($request, 'akun_ids');
 
         $akunOptions = DB::table('akun_biaya')
-            ->where('id', '!=', 1)
-            ->whereRaw('LOWER(name) != ?', ['kas'])
+            ->where('dikecualikan', false)
             ->orderBy('name')
             ->get(['id', 'name']);
 
@@ -51,6 +51,7 @@ class LaporanJurnalUmumController extends Controller
         } elseif ($tab === 'tren') {
             $data['tren_tahun'] = $periode->tahun ?? (int) now()->year;
             $data['tren'] = CostReport::monthlyByAkun($data['tren_tahun'], $divisionIds, $akunIds);
+            $data['tren_lalu'] = CostReport::monthlyRealisasi($data['tren_tahun'] - 1, $divisionIds, $akunIds);
         } else {
             $data += $this->tokoTabData($request);
         }
@@ -77,8 +78,7 @@ class LaporanJurnalUmumController extends Controller
 
         $subAkunOptions = DB::table('sub_akun_biaya as sab')
             ->join('akun_biaya as ab', 'ab.id', '=', 'sab.akun_biaya_id')
-            ->where('ab.id', '!=', 1)
-            ->whereRaw('LOWER(ab.name) != ?', ['kas'])
+            ->where('ab.dikecualikan', false)
             ->when($divisionReport['selected_akun_ids'], fn ($q, $ids) => $q->whereIn('ab.id', $ids))
             ->orderBy('ab.name')->orderBy('sab.name')
             ->get(['sab.id', 'sab.name', 'sab.akun_biaya_id', 'ab.name as akun_name']);
@@ -114,8 +114,7 @@ class LaporanJurnalUmumController extends Controller
             ->join('divisions as d', 'd.id', '=', 'sd.division_id')
             ->join('sub_akun_biaya as sab', 'sab.id', '=', 'ju.sub_akun_biaya_id')
             ->join('akun_biaya as ab', 'ab.id', '=', 'sab.akun_biaya_id')
-            ->where('ab.id', '!=', 1)
-            ->whereRaw('LOWER(ab.name) != ?', ['kas']);
+            ->where('ab.dikecualikan', false);
         $periode->applyToJurnal($base);
         foreach (['akun_id' => 'ab.id', 'sub_akun_id' => 'sab.id', 'division_id' => 'd.id', 'sub_divisi_id' => 'sd.id'] as $key => $col) {
             if (!empty($v[$key])) {
@@ -246,10 +245,17 @@ class LaporanJurnalUmumController extends Controller
             ], 422);
         }
 
+        $lama = $base()->whereNull('bulan')->value('amount');
+        $label = DB::table('sub_divisions')->where('id', $subDivisiId)->value('name').' · '
+            .DB::table('akun_biaya')->where('id', $akunBiayaId)->value('name').' · Tahunan '.$tahun;
+        $logChange = fn ($baru) => Audit::log($baru === null ? 'hapus' : ($lama === null ? 'tambah' : 'ubah'), 'Budget toko', $subDivisiId,
+            'Budget toko '.$label.($baru === null ? ' dihapus' : ' disimpan'), ['amount' => [$lama, $baru]]);
+
         DB::beginTransaction();
         try {
             if ($amount === null || $amount === '') {
                 $base()->whereNull('bulan')->delete();
+                $logChange(null);
                 DB::commit();
 
                 return response()->json([
@@ -276,6 +282,7 @@ class LaporanJurnalUmumController extends Controller
                 ]);
             }
 
+            $logChange((float) $amount);
             DB::commit();
 
             return response()->json([
@@ -328,8 +335,7 @@ class LaporanJurnalUmumController extends Controller
             ->join('divisions as d', 'd.id', '=', 'sd.division_id')
             ->join('sub_akun_biaya as sab', 'sab.id', '=', 'ju.sub_akun_biaya_id')
             ->join('akun_biaya as ab', 'ab.id', '=', 'sab.akun_biaya_id')
-            ->where('ab.id', '!=', 1)
-            ->whereRaw('LOWER(ab.name) != ?', ['kas'])
+            ->where('ab.dikecualikan', false)
             ->select(
                 'd.id as division_id',
                 'd.name as division',
@@ -523,8 +529,7 @@ class LaporanJurnalUmumController extends Controller
             ->join('divisions as d', 'd.id', '=', 'sd.division_id')
             ->join('sub_akun_biaya as sab', 'sab.id', '=', 'ju.sub_akun_biaya_id')
             ->join('akun_biaya as ab', 'ab.id', '=', 'sab.akun_biaya_id')
-            ->where('ab.id', '!=', 1)
-            ->whereRaw('LOWER(ab.name) != ?', ['kas'])
+            ->where('ab.dikecualikan', false)
             ->select(
                 'd.id as division_id',
                 'd.name as division',

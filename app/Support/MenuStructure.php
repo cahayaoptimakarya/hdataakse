@@ -5,7 +5,7 @@ namespace App\Support;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Susunan menu sidebar (Tahap 2). Dipakai oleh migration dan seeder.
+ * Susunan menu sidebar (Tahap 2, ditambah Log Aktivitas di Tahap 4). Dipakai oleh migration dan seeder.
  * Menu lama dipindah berdasarkan slug, jadi hak akses per menu tetap.
  */
 class MenuStructure
@@ -29,6 +29,7 @@ class MenuStructure
         'roles' => ['master-data', 'Peran', 'admin.masterdata.roles.index', 'fa-solid fa-user-shield', 2],
         'permissions' => ['master-data', 'Hak Akses', 'admin.masterdata.permissions.index', 'fa-solid fa-lock', 3],
         'menus' => ['master-data', 'Menu', 'admin.masterdata.menus.index', 'fa-solid fa-bars', 4],
+        'log-aktivitas' => ['master-data', 'Log Aktivitas', 'admin.masterdata.audit.index', 'fa-solid fa-clock-rotate-left', 5],
     ];
 
     public static function apply(): void

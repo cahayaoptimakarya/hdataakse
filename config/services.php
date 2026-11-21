@@ -35,4 +35,9 @@ return [
         ],
     ],
 
+    // Penerima email peringatan budget (dipisah koma). Kosong = semua pengguna berperan admin.
+    'budget_alert' => [
+        'emails' => env('BUDGET_ALERT_EMAILS'),
+    ],
+
 ];

@@ -31,7 +31,7 @@ class BudgetPeriodeTest extends TestCase
         $this->division = Division::create(['name' => 'Retail']);
         $this->toko = SubDivision::create(['division_id' => $this->division->id, 'name' => 'Toko A']);
         // Laporan selalu mengecualikan akun id 1 / "kas".
-        AkunBiaya::create(['name' => 'Kas']);
+        AkunBiaya::create(['name' => 'Kas', 'dikecualikan' => true]);
         $this->akun = AkunBiaya::create(['name' => 'Operasional']);
         $this->kategori = SubAkunBiaya::create(['akun_biaya_id' => $this->akun->id, 'name' => 'Listrik']);
     }

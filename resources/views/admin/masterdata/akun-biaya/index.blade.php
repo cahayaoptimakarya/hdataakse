@@ -135,6 +135,15 @@
                         <input type="text" class="form-control form-control-solid" name="name" id="akun_name" required />
                         <div class="invalid-feedback" id="error_akun_name"></div>
                     </div>
+                    <div class="fv-row mb-7">
+                        <label class="form-check form-check-custom form-check-solid align-items-start">
+                            <input class="form-check-input mt-1" type="checkbox" name="dikecualikan" value="1" id="akun_dikecualikan" />
+                            <span class="form-check-label">
+                                <span class="fw-bold d-block">Bukan biaya (kecualikan dari laporan)</span>
+                                <span class="text-muted fs-7">Centang untuk akun seperti Kas. Transaksi dan budget akun ini tidak dihitung di dashboard dan laporan.</span>
+                            </span>
+                        </label>
+                    </div>
                     <div class="text-end pt-3">
                         <button type="button" class="btn btn-light me-3" data-bs-dismiss="modal">Batal</button>
                         <button type="submit" class="btn btn-primary">
@@ -356,9 +365,9 @@
             },
             columns: [
                 { data: 'id' },
-                { data: 'name' },
+                { data: 'name', render: (data, type, row) => row.dikecualikan ? `${data} <span class="badge b-gray ms-2">Bukan biaya</span>` : data },
                 { data: 'id', orderable:false, searchable:false, className:'text-end', render: (data, type, row)=>{
-                    const editItem = `<div class="menu-item px-3"><a href="#" class="menu-link px-3 btn-edit-akun" data-id="${data}" data-name="${row.name}">Ubah</a></div>`;
+                    const editItem = `<div class="menu-item px-3"><a href="#" class="menu-link px-3 btn-edit-akun" data-id="${data}" data-name="${row.name}" data-dikecualikan="${row.dikecualikan ? 1 : 0}">Ubah</a></div>`;
                     const delItem = `<div class="menu-item px-3"><a href="#" class="menu-link px-3 text-danger btn-delete-akun" data-id="${data}">Hapus</a></div>`;
                     return `
                         <div class="text-end">
@@ -596,6 +605,7 @@
             const name = this.getAttribute('data-name');
             if (akunId) akunId.value = id;
             if (akunName) akunName.value = name || '';
+            document.getElementById('akun_dikecualikan').checked = this.getAttribute('data-dikecualikan') === '1';
             clearAkunErrors();
             if (akunTitle) akunTitle.textContent = 'Ubah akun';
             akunModal?.show();

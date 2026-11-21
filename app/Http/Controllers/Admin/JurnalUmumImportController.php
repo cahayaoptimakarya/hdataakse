@@ -7,6 +7,7 @@ use App\Exports\JurnalUmumTemplateExport;
 use App\Http\Controllers\Controller;
 use App\Imports\JurnalUmumImport;
 use App\Models\JurnalImportBatch;
+use App\Support\Audit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -123,6 +124,8 @@ class JurnalUmumImportController extends Controller
 
         $file = $request->file('file');
         $fileName = $file->getClientOriginalName();
+        // Pratinjau: import dijalankan penuh lalu di-rollback, tidak ada yang tersimpan atau tercatat.
+        $preview = $request->boolean('preview');
         $fileHash = hash_file('sha256', $file->getRealPath());
 
         // Tolak file yang persis sama dengan import yang masih aktif.
@@ -130,6 +133,9 @@ class JurnalUmumImportController extends Controller
         if ($sameFile) {
             $message = "File ini sama persis dengan import {$sameFile->kode()} ({$sameFile->file_name}, "
                 .$sameFile->created_at->format('d/m/Y H:i').'). Import dibatalkan agar data tidak dobel.';
+            if ($preview) {
+                return response()->json(['message' => $message, 'duplicate_of' => $sameFile->id], 422);
+            }
             JurnalImportBatch::create([
                 'file_name' => $fileName,
                 'file_hash' => $fileHash,
@@ -159,7 +165,7 @@ class JurnalUmumImportController extends Controller
                 // Tidak ada yang disimpan: batalkan transaksi, lalu catat sebagai gagal.
                 DB::rollBack();
                 $errorPath = $this->storeErrorFile($import->errorRows);
-                $failed = JurnalImportBatch::create([
+                $failed = $preview ? null : JurnalImportBatch::create([
                     'file_name' => $fileName,
                     'file_hash' => $fileHash,
                     'user_id' => $request->user()?->id,
@@ -181,7 +187,35 @@ class JurnalUmumImportController extends Controller
                     'errors' => array_slice($import->errors, 0, 20),
                     'error_file_url' => $errorPath ? Storage::disk('public')->url($errorPath) : null,
                     'all_failed' => true,
-                    'batch' => $failed->kode(),
+                    'preview' => $preview,
+                    'batch' => $failed?->kode(),
+                ]);
+            }
+
+            if ($preview) {
+                $sample = DB::table('jurnal_umum as ju')
+                    ->join('sub_divisions as sd', 'sd.id', '=', 'ju.sub_divisi_id')
+                    ->join('sub_akun_biaya as sab', 'sab.id', '=', 'ju.sub_akun_biaya_id')
+                    ->where('ju.import_batch_id', $batch->id)
+                    ->orderBy('ju.id')->limit(10)
+                    ->get(['ju.tanggal', 'ju.keterangan', 'sd.name as toko', 'sab.name as kategori', 'ju.debet', 'ju.kredit']);
+                $perToko = DB::table('jurnal_umum as ju')
+                    ->join('sub_divisions as sd', 'sd.id', '=', 'ju.sub_divisi_id')
+                    ->where('ju.import_batch_id', $batch->id)
+                    ->groupBy('sd.name')->orderByDesc('total')->limit(8)
+                    ->get(['sd.name', DB::raw('COUNT(*) as jumlah'), DB::raw('SUM(ju.kredit) as total')]);
+                DB::rollBack();
+
+                return response()->json([
+                    'preview' => true,
+                    'message' => 'Pratinjau siap. Belum ada data yang disimpan.',
+                    'created' => $import->created,
+                    'total_debet' => $import->totalDebet,
+                    'total_kredit' => $import->totalKredit,
+                    'tanggal_awal' => $import->tanggalAwal,
+                    'tanggal_akhir' => $import->tanggalAkhir,
+                    'sample' => $sample,
+                    'per_toko' => $perToko,
                 ]);
             }
 
@@ -192,6 +226,7 @@ class JurnalUmumImportController extends Controller
                 'tanggal_awal' => $import->tanggalAwal,
                 'tanggal_akhir' => $import->tanggalAkhir,
             ]);
+            Audit::log('import', 'Import jurnal', $batch->id, "Import {$batch->kode()} ({$fileName}): {$import->created} baris");
             DB::commit();
 
             return response()->json([
@@ -242,6 +277,7 @@ class JurnalUmumImportController extends Controller
                 'cancelled_at' => now(),
                 'cancelled_by' => $request->user()?->id,
             ]);
+            Audit::log('batal', 'Import jurnal', $batch->id, "Import {$batch->kode()} ({$batch->file_name}) dibatalkan, {$deleted} baris dihapus");
             DB::commit();
         } catch (\Throwable $e) {
             DB::rollBack();
@@ -274,6 +310,7 @@ class JurnalUmumImportController extends Controller
                 'cancelled_by' => $request->user()?->id,
                 'message' => 'Dihapus lewat Hapus Semua',
             ]);
+            Audit::log('hapus', 'Jurnal umum', null, "Semua jurnal umum dihapus ({$count} baris)");
             DB::commit();
             return response()->json([
                 'message' => 'Semua data jurnal umum berhasil dihapus.',

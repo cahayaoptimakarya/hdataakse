@@ -170,6 +170,11 @@ class BudgetController extends Controller
 
     private function validatePayload(Request $request): array
     {
+        // Input jumlah boleh berformat Rupiah (mis. 1.500.000 atau 1.500.000,50).
+        if (is_string($request->input('amount'))) {
+            $parsed = \App\Imports\JurnalUmumImport::parseAmount($request->input('amount'));
+            $request->merge(['amount' => $parsed ?? $request->input('amount')]);
+        }
         $validated = $request->validate([
             'division_id' => ['required', 'integer', 'exists:divisions,id'],
             'akun_biaya_id' => ['required', 'integer', 'exists:akun_biaya,id'],
@@ -180,6 +185,55 @@ class BudgetController extends Controller
         $validated['bulan'] = isset($validated['bulan']) && $validated['bulan'] !== '' ? (int) $validated['bulan'] : null;
 
         return $validated;
+    }
+
+    public function template()
+    {
+        return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\BudgetTemplateExport(), 'template-import-budget.xlsx');
+    }
+
+    /** Import budget dari Excel: semua baris valid baru disimpan, kalau ada yang salah tidak ada yang disimpan. */
+    public function import(Request $request)
+    {
+        $request->validate(['file' => ['required', 'file', 'mimes:xlsx,xls', 'max:5120']]);
+        $sheets = \Maatwebsite\Excel\Facades\Excel::toArray(new class implements \Maatwebsite\Excel\Concerns\WithHeadingRow {}, $request->file('file'));
+        $rows = $sheets[0] ?? [];
+        if (!$rows || !array_key_exists('jumlah', array_change_key_case($rows[0]))) {
+            return response()->json(['message' => 'Format file tidak sesuai. Pakai template: '.implode(', ', \App\Services\BudgetTools::HEADERS).'.'], 422);
+        }
+        $result = \App\Services\BudgetTools::import($rows);
+        if (!$result['ok']) {
+            return response()->json([
+                'message' => count($result['errors']).' baris bermasalah, tidak ada budget yang disimpan.',
+                'errors' => array_slice($result['errors'], 0, 50),
+            ], 422);
+        }
+
+        return response()->json([
+            'message' => "Import selesai: {$result['created']} budget baru, {$result['updated']} diperbarui.",
+        ] + $result);
+    }
+
+    public function copy(Request $request)
+    {
+        $v = $request->validate([
+            'dari_tahun' => ['required', 'integer', 'min:2000', 'max:2100'],
+            'ke_tahun' => ['required', 'integer', 'min:2000', 'max:2100', 'different:dari_tahun'],
+            'persen' => ['nullable', 'numeric', 'min:-100', 'max:1000'],
+            'timpa' => ['nullable', 'boolean'],
+            'termasuk_toko' => ['nullable', 'boolean'],
+        ]);
+        if (!Budget::where('tahun', $v['dari_tahun'])->exists() && !DB::table('sub_divisi_budgets')->where('tahun', $v['dari_tahun'])->exists()) {
+            return response()->json(['message' => 'Belum ada budget di tahun '.$v['dari_tahun'].'.'], 422);
+        }
+        $r = \App\Services\BudgetTools::copy((int) $v['dari_tahun'], (int) $v['ke_tahun'], (float) ($v['persen'] ?? 0),
+            $request->boolean('timpa'), $request->boolean('termasuk_toko', true));
+
+        return response()->json([
+            'message' => "{$r['copied']} budget disalin ke {$v['ke_tahun']}."
+                .($r['skipped'] ? " {$r['skipped']} dilewati karena sudah ada." : '')
+                .($r['replaced'] ? " {$r['replaced']} budget lama ditimpa." : ''),
+        ] + $r);
     }
 
     /**

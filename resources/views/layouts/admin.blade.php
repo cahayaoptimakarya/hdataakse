@@ -94,6 +94,9 @@
                 </div>
             </header>
             <main class="ui-content" id="kt_content">
+                @hasSection('page_actions')
+                    <div class="ui-actions-m">@yield('page_actions')</div>
+                @endif
                 @yield('content')
             </main>
             <footer class="ui-foot">{{ date('Y') }} · Kontrol Biaya</footer>
@@ -103,6 +106,7 @@
     <script src="{{ asset('metronic/plugins/global/plugins.bundle.js') }}"></script>
     <script src="{{ asset('metronic/js/scripts.bundle.js') }}"></script>
     <script src="{{ asset('metronic/plugins/custom/datatables/datatables.bundle.js') }}"></script>
+    <script src="{{ asset('js/ui.js') }}?v={{ filemtime(public_path('js/ui.js')) }}"></script>
     <script>
         // Teks tabel DataTables dalam Bahasa Indonesia untuk semua halaman.
         if (window.jQuery && jQuery.fn.dataTable) {

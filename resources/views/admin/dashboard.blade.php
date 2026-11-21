@@ -8,7 +8,8 @@
     $pct = CostReport::pct($tr, $tb);
     $st = CostReport::status($pct, $tr);
     $yoy = $realisasiLalu > 0 ? ($tr - $realisasiLalu) / $realisasiLalu * 100 : null;
-    $maxBar = max(1, collect($monthly)->map(fn ($m) => max($m['realisasi'], $m['budget']))->max());
+    $maxBar = max(1, collect($monthly)->map(fn ($m) => max($m['realisasi'], $m['budget']))->max(), max($monthlyLalu));
+    $adaLalu = array_sum($monthlyLalu) > 0;
     $bulanPendek = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
     $laporanUrl = fn ($extra = []) => route('admin.keuangan.laporan.index', array_merge($periode->toQuery(), $extra));
 @endphp
@@ -76,15 +77,16 @@
                 <div class="hd">
                     <h3>Tren realisasi vs budget {{ $periode->tahun }}</h3>
                     <span class="ui-sp"></span>
-                    <div class="ui-legend"><span><i style="background:#3b82f6"></i>Realisasi</span><span><i style="background:var(--ui-bad)"></i>Lewat budget</span><span><i style="background:none;border-top:2px dashed #f59e0b;height:0;border-radius:0"></i>Budget</span></div>
+                    <div class="ui-legend"><span><i style="background:#3b82f6"></i>Realisasi</span><span><i style="background:var(--ui-bad)"></i>Lewat budget</span><span><i style="background:none;border-top:2px dashed #f59e0b;height:0;border-radius:0"></i>Budget</span>@if($adaLalu)<span><i style="background:#cbd5e1"></i>{{ $periode->tahun - 1 }}</span>@endif</div>
                 </div>
                 <div class="px-5 pt-4 pb-4">
                     <div class="ui-chart">
                         @foreach($monthly as $m => $v)
-                            <div class="col" title="{{ $bulanPendek[$m] }}: realisasi {{ Fmt::rp($v['realisasi']) }}, budget {{ Fmt::rp($v['budget']) }}">
+                            <div class="col" title="{{ $bulanPendek[$m] }}: realisasi {{ Fmt::rp($v['realisasi']) }}, budget {{ Fmt::rp($v['budget']) }}{{ $adaLalu ? ', '.($periode->tahun - 1).' '.Fmt::rp($monthlyLalu[$m]) : '' }}">
                                 @if($v['budget'] > 0)
                                     <div class="bud" style="bottom: {{ $v['budget'] / $maxBar * 100 }}%"></div>
                                 @endif
+                                @if($adaLalu)<div class="ly" style="height: {{ $monthlyLalu[$m] / $maxBar * 100 }}%"></div>@endif
                                 <div class="bar {{ $v['budget'] > 0 && $v['realisasi'] > $v['budget'] ? 'over' : '' }}" style="height: {{ $v['realisasi'] / $maxBar * 100 }}%; {{ $m > $periode->bulanSampai ? 'opacity:.35' : '' }}"></div>
                             </div>
                         @endforeach

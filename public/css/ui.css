@@ -188,7 +188,8 @@ body.ui h1, body.ui h2, body.ui h3, body.ui h4, body.ui .fw-bolder { font-family
 
 /* Grafik batang tren */
 .ui-chart { display: flex; align-items: flex-end; gap: 10px; height: 240px; padding: 10px 4px 0; border-bottom: 1px solid var(--ui-line); position: relative; }
-.ui-chart .col { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; position: relative; }
+.ui-chart .col { flex: 1; height: 100%; display: flex; flex-direction: row; justify-content: center; align-items: flex-end; gap: 2px; position: relative; }
+.ui-chart .col .ly { width: 24%; max-width: 12px; background: #cbd5e1; border-radius: 3px 3px 0 0; }
 .ui-chart .col .bar { width: 70%; max-width: 38px; background: #3b82f6; border-radius: 4px 4px 0 0; }
 .ui-chart .col .bar.over { background: var(--ui-bad); }
 .ui-chart .col .bud { position: absolute; left: 8%; right: 8%; border-top: 2px dashed #f59e0b; }
@@ -202,3 +203,82 @@ body.ui h1, body.ui h2, body.ui h3, body.ui h4, body.ui .fw-bolder { font-family
 .ui .ui-pager nav .flex-sm-fill > div:first-child { display: none; }
 .ui .ui-pager nav .flex-sm-fill { justify-content: flex-end !important; }
 .ui .ui-pager .pagination { margin-bottom: 0; }
+
+/* ---------- Komponen form: tanggal, select2, uang ---------- */
+.ui-date-wrap { position: relative; }
+.ui-date-wrap .ui-date-clear { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); border: 0; background: none; color: var(--ui-ink3); font-size: 18px; line-height: 1; padding: 2px 6px; cursor: pointer; }
+.ui-date-wrap .ui-date-clear:hover { color: var(--ui-bad); }
+.ui .flatpickr-input[readonly] { background-color: #fff; cursor: pointer; }
+.flatpickr-calendar { font-family: inherit; border-radius: 10px; box-shadow: 0 10px 30px rgba(15,23,42,.15); }
+.flatpickr-day.selected, .flatpickr-day.selected:hover { background: var(--ui-brand); border-color: var(--ui-brand); }
+.ui .select2-container .select2-selection { border: 1px solid var(--ui-line) !important; border-radius: 8px !important; background-color: #fff !important; }
+/* Tinggi select2 sama dengan dropdown biasa ukuran kecil */
+.ui .select2-container .select2-selection--single.form-select-sm { height: 35.8px; min-height: 0; padding-top: 0.45rem; padding-bottom: 0.45rem; font-size: 13px; }
+.ui .select2-container .select2-selection--multiple.form-select-sm { min-height: 35.8px; padding-top: 0.2rem; padding-bottom: 0.2rem; font-size: 13px; }
+.ui .select2-container--focus .select2-selection, .ui .select2-container--open .select2-selection { border-color: var(--ui-brand) !important; }
+.select2-dropdown { border-color: var(--ui-line) !important; border-radius: 8px !important; box-shadow: 0 10px 30px rgba(15,23,42,.12); }
+.ui input[data-money] { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ---------- Responsive ---------- */
+@media (min-width: 992px) {
+    /* Latar sidebar penuh setinggi halaman (juga saat halaman panjang). */
+    .ui-app { background: linear-gradient(90deg, var(--ui-side) var(--ui-side-w), transparent var(--ui-side-w)); }
+}
+@media (max-width: 991.98px) {
+    .ui-side { box-shadow: none; }
+    body.ui-side-open .ui-side { box-shadow: 10px 0 30px rgba(0,0,0,.2); }
+}
+.ui-actions-m { display: none; }
+@media (max-width: 767.98px) {
+    .ui-top { height: 56px; gap: 8px; }
+    .ui-crumb a, .ui-crumb > :not(strong) { display: none; }
+    .ui-crumb { font-size: 0; }
+    .ui-crumb strong { font-size: 16px; }
+    .ui-actions-m { display: flex; flex-wrap: wrap; gap: 8px; margin: -4px 0 14px; }
+    .ui-actions-m form { flex-wrap: wrap; }
+    .ui-content { padding: 14px 12px 24px; }
+    .ui-foot { padding: 12px 16px; }
+
+    .ui-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .ui-kpi { padding: 12px 14px; }
+    .ui-kpi .v { font-size: 17px; }
+    .ui-kpi .s, .ui-kpi .l { font-size: 11px; }
+
+    .ui-panel > .hd { flex-wrap: wrap; padding: 12px 14px; }
+    .ui-panel > .hd .ui-legend { order: 3; width: 100%; }
+    .ui-row { padding: 10px 14px; }
+    .ui-chart { gap: 3px; height: 180px; }
+    .ui-chart-x { gap: 3px; }
+    .ui-chart-x div { font-size: 9.5px; }
+    .ui-mx { font-size: 12px; }
+    .ui-mx td:first-child, .ui-mx th:first-child { min-width: 140px; max-width: 160px; white-space: normal; }
+    .ui-mx .cell { min-width: 104px; }
+    .ui-mx th, .ui-mx td { padding: 8px 9px; }
+    .ui-scroll { max-height: none; }
+    .ui .nav-tabs { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+    .ui .nav-tabs .nav-link { white-space: nowrap; }
+
+    /* Kartu & tabel Metronic */
+    .ui .card .card-header { flex-wrap: wrap; gap: 10px; padding: 12px 14px !important; min-height: 0; }
+    .ui .card .card-header .card-title, .ui .card .card-header .card-toolbar { margin: 0 !important; width: 100%; }
+    .ui .card .card-header .card-title .w-250px { width: 100% !important; }
+    .ui .card .card-toolbar > div { flex-wrap: wrap; gap: 8px; width: 100%; justify-content: flex-start !important; }
+    .ui .card .card-toolbar .btn { margin: 0 !important; }
+    .ui .card .card-body { padding: 14px !important; }
+    .ui .dataTables_wrapper .row { --bs-gutter-x: 0; }
+    .ui .dataTables_wrapper .dataTables_info { white-space: normal !important; text-align: center; }
+    .ui .dataTables_wrapper .dataTables_paginate { justify-content: center !important; display: flex; }
+    .ui .modal-dialog { margin: 10px; }
+    .ui .modal-body { padding: 16px !important; margin: 0 !important; }
+
+    /* Tabel tumpuk: tiap baris jadi kartu kecil (pakai data-label di <td>). */
+    .ui table.ui-stack thead { display: none; }
+    table.ui-stack, table.ui-stack tbody, table.ui-stack tr, table.ui-stack td { display: block; width: 100%; }
+    .ui table.ui-stack tr { padding: 10px 14px; border-bottom: 1px solid var(--ui-line); }
+    .ui table.ui-stack td { padding: 3px 0 !important; border: 0 !important; text-align: right !important; white-space: normal !important; min-width: 0 !important; }
+    .ui table.ui-stack td::before { content: attr(data-label); float: left; color: var(--ui-ink3); font-size: 11.5px; margin-right: 12px; }
+    .ui table.ui-stack td::after { content: ""; display: block; clear: both; }
+    .ui table.ui-stack td[data-label=""]::before { content: none; }
+    .ui table.ui-stack td.ui-stack-main { text-align: left !important; font-weight: 600; padding-bottom: 4px !important; }
+    .ui table.ui-stack td.ui-stack-main::before { content: none; }
+}

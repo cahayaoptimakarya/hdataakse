@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class SubAkunBiaya extends Model
 {
-    use HasFactory;
+    use Auditable, HasFactory;
 
     protected $table = 'sub_akun_biaya';
 
@@ -19,5 +20,15 @@ class SubAkunBiaya extends Model
     public function akunBiaya()
     {
         return $this->belongsTo(AkunBiaya::class, 'akun_biaya_id');
+    }
+
+    public function auditType(): string
+    {
+        return 'Kategori';
+    }
+
+    public function auditName(): string
+    {
+        return $this->name;
     }
 }

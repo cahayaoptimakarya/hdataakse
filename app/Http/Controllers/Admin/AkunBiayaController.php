@@ -41,6 +41,7 @@ class AkunBiayaController extends Controller
             return [
                 'id' => $akun->id,
                 'name' => $akun->name,
+                'dikecualikan' => (bool) $akun->dikecualikan,
             ];
         });
 
@@ -56,7 +57,9 @@ class AkunBiayaController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:150'],
+            'dikecualikan' => ['nullable', 'boolean'],
         ]);
+        $validated['dikecualikan'] = $request->boolean('dikecualikan');
 
         DB::beginTransaction();
         try {
@@ -83,7 +86,9 @@ class AkunBiayaController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:150'],
+            'dikecualikan' => ['nullable', 'boolean'],
         ]);
+        $validated['dikecualikan'] = $request->boolean('dikecualikan');
 
         DB::beginTransaction();
         try {

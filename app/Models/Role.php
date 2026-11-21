@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Role extends Model
 {
-    use HasFactory;
+    use Auditable, HasFactory;
 
     protected $fillable = ['name', 'slug', 'description'];
 
@@ -22,5 +23,14 @@ class Role extends Model
             ->withPivot(['can_view','can_create','can_update','can_delete'])
             ->withTimestamps();
     }
-}
 
+    public function auditType(): string
+    {
+        return 'Peran';
+    }
+
+    public function auditName(): string
+    {
+        return $this->name;
+    }
+}

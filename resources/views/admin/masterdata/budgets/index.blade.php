@@ -3,6 +3,13 @@
 @section('title', 'Budget per Periode')
 @section('page_title', 'Budget per Periode')
 
+@section('page_actions')
+    <div class="d-flex gap-2 flex-wrap">
+        <button type="button" class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#modal_budget_import"><i class="fa-solid fa-file-import me-1"></i> Import Excel</button>
+        <button type="button" class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#modal_budget_copy"><i class="fa-solid fa-copy me-1"></i> Salin dari tahun lain</button>
+    </div>
+@endsection
+
 @section('content')
 <div class="card">
     <div class="card-header border-0 pt-6">
@@ -150,7 +157,7 @@
                     </div>
                     <div class="fv-row mb-7">
                         <label class="required fs-6 fw-bold form-label mb-2">Jumlah</label>
-                        <input type="number" class="form-control form-control-solid" name="amount" id="budget_amount" min="0" step="0.01" required />
+                        <input type="text" inputmode="decimal" class="form-control form-control-solid" name="amount" id="budget_amount" data-money required placeholder="0" />
                         <div class="invalid-feedback" id="error_amount"></div>
                     </div>
                     <div class="text-end pt-3">
@@ -168,6 +175,91 @@
 </div>
 <!--end::Modal-->
 @endsection
+
+<div class="modal fade" id="modal_budget_import" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered mw-600px">
+        <div class="modal-content">
+            <div class="modal-header py-4"><h3 class="modal-title fs-5">Import budget dari Excel</h3>
+                <button type="button" class="btn btn-sm btn-icon btn-light" data-bs-dismiss="modal" aria-label="Tutup"><i class="fa-solid fa-xmark"></i></button></div>
+            <div class="modal-body">
+                <ol class="ps-4 fs-7 ui-muted mb-4">
+                    <li>Unduh <a href="{{ route('admin.keuangan.budget.template') }}">template Excel</a>. Kolom: tahun, bulan, divisi, toko, akun, jumlah.</li>
+                    <li>Kosongkan <b>bulan</b> untuk budget tahunan. Isi <b>toko</b> untuk budget per toko, atau <b>divisi</b> untuk budget divisi.</li>
+                    <li>Budget yang sudah ada dengan periode sama akan diperbarui. Kalau ada baris yang salah, tidak ada yang disimpan.</li>
+                </ol>
+                <input type="file" class="form-control form-control-solid" id="bi_file" accept=".xlsx,.xls">
+                <div id="bi_result" class="mt-4"></div>
+            </div>
+            <div class="modal-footer py-3">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Tutup</button>
+                <button type="button" class="btn btn-primary" id="bi_submit">Import</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modal_budget_copy" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered mw-500px">
+        <div class="modal-content">
+            <div class="modal-header py-4"><h3 class="modal-title fs-5">Salin budget dari tahun lain</h3>
+                <button type="button" class="btn btn-sm btn-icon btn-light" data-bs-dismiss="modal" aria-label="Tutup"><i class="fa-solid fa-xmark"></i></button></div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-6"><label class="form-label">Dari tahun</label><input type="number" class="form-control form-control-solid" id="bc_dari" value="{{ now()->year }}"></div>
+                    <div class="col-6"><label class="form-label">Ke tahun</label><input type="number" class="form-control form-control-solid" id="bc_ke" value="{{ now()->year + 1 }}"></div>
+                    <div class="col-12"><label class="form-label">Penyesuaian (%)</label>
+                        <input type="number" step="0.1" class="form-control form-control-solid" id="bc_persen" value="0">
+                        <div class="form-text">Contoh: 5 untuk naik 5%, -10 untuk turun 10%. Hasil dibulatkan ke ribuan.</div></div>
+                    <div class="col-12"><label class="form-check form-check-custom form-check-solid"><input class="form-check-input" type="checkbox" id="bc_toko" checked><span class="form-check-label">Ikut salin budget per toko</span></label></div>
+                    <div class="col-12"><label class="form-check form-check-custom form-check-solid"><input class="form-check-input" type="checkbox" id="bc_timpa"><span class="form-check-label">Timpa budget yang sudah ada di tahun tujuan</span></label>
+                        <div class="form-text">Kalau tidak dicentang, pasangan divisi/toko dan akun yang sudah punya budget di tahun tujuan dilewati.</div></div>
+                </div>
+            </div>
+            <div class="modal-footer py-3">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
+                <button type="button" class="btn btn-primary" id="bc_submit">Salin</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const token = document.querySelector('meta[name=csrf-token]').content;
+    const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const post = async (url, body) => {
+        const res = await fetch(url, { method: 'POST', headers: { 'X-CSRF-TOKEN': token, Accept: 'application/json' }, body });
+        return { ok: res.ok, json: await res.json().catch(() => ({ message: 'Respons server tidak valid.' })) };
+    };
+    document.getElementById('bi_submit').addEventListener('click', async (e) => {
+        const file = document.getElementById('bi_file').files[0];
+        const out = document.getElementById('bi_result');
+        if (!file) { out.innerHTML = '<div class="c-bad fs-7">Pilih file Excel dulu.</div>'; return; }
+        const fd = new FormData(); fd.append('file', file);
+        e.target.disabled = true; out.innerHTML = '<div class="ui-muted fs-7">Memproses…</div>';
+        const { ok, json } = await post(@json(route('admin.keuangan.budget.import')), fd);
+        e.target.disabled = false;
+        if (ok) { out.innerHTML = `<div class="alert alert-success py-3 mb-0">${esc(json.message)}</div>`; setTimeout(() => location.reload(), 1200); return; }
+        out.innerHTML = `<div class="alert alert-danger py-3 mb-2">${esc(json.message)}</div>` + (json.errors?.length
+            ? '<div class="fs-7" style="max-height:220px;overflow:auto">' + json.errors.map((r) => `<div><b>Baris ${r.baris}:</b> ${esc(r.pesan)}</div>`).join('') + '</div>' : '');
+    });
+    document.getElementById('bc_submit').addEventListener('click', async (e) => {
+        const fd = new FormData();
+        fd.append('dari_tahun', document.getElementById('bc_dari').value);
+        fd.append('ke_tahun', document.getElementById('bc_ke').value);
+        fd.append('persen', document.getElementById('bc_persen').value || 0);
+        fd.append('termasuk_toko', document.getElementById('bc_toko').checked ? 1 : 0);
+        fd.append('timpa', document.getElementById('bc_timpa').checked ? 1 : 0);
+        e.target.disabled = true;
+        const { ok, json } = await post(@json(route('admin.keuangan.budget.copy')), fd);
+        e.target.disabled = false;
+        const msg = json.message || Object.values(json.errors || {}).flat().join(' ');
+        Swal.fire({ icon: ok ? 'success' : 'error', text: msg }).then(() => { if (ok) location.reload(); });
+    });
+});
+</script>
+@endpush
 
 @push('scripts')
 <script>
@@ -364,7 +456,7 @@
             const amount = this.getAttribute('data-amount');
             if (!form) return;
             formId.value = id;
-            formAmount.value = amount ?? '';
+            UI.setMoney(formAmount, amount ?? '');
             if (formTahun) formTahun.value = this.getAttribute('data-tahun') || defaultTahun;
             if (formBulan) formBulan.value = this.getAttribute('data-bulan') || '';
             setSelectValue(formDivision, divisionId || '');
