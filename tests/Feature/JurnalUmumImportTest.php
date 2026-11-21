@@ -49,7 +49,7 @@ class JurnalUmumImportTest extends TestCase
     {
         $file = $this->makeFile([
             [ExcelDate::PHPToExcel(new \DateTime('2026-11-21')), 'Bayar listrik', 'Toko A', 'Listrik', 100000, 0],
-            ['05/10/2026', 'Bayar listrik 2', 'Toko A', 'Listrik', 1500000, 0],
+            ['05/10/2026', 'Bayar listrik 2', 'Toko A', 'Listrik', '1.500.000', 0],
             ['2026-09-01', 'Bayar listrik 3', 'toko a', 'listrik', 0, 2500],
         ]);
 
@@ -58,6 +58,7 @@ class JurnalUmumImportTest extends TestCase
 
         $this->assertSame([], $import->errors);
         $this->assertSame(3, $import->created);
+        $this->assertEqualsWithDelta(1600000.0, (float) JurnalUmum::sum('debet'), 0.001);
         $this->assertSame(
             ['2026-09-01', '2026-10-05', '2026-11-21'],
             JurnalUmum::orderBy('tanggal')->get()->map(fn ($j) => substr((string) $j->tanggal, 0, 10))->all()

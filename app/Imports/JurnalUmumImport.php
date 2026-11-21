@@ -85,8 +85,8 @@ class JurnalUmumImport implements OnEachRow, WithHeadingRow, SkipsEmptyRows, Wit
             return;
         }
 
-        $debet = $this->parseAmount($debetRaw);
-        $kredit = $this->parseAmount($kreditRaw);
+        $debet = self::parseAmount($debetRaw);
+        $kredit = self::parseAmount($kreditRaw);
 
         if ($debet === null || $kredit === null) {
             $this->errors[] = "Baris {$rowIndex}: debet/kredit tidak valid";
@@ -254,17 +254,24 @@ class JurnalUmumImport implements OnEachRow, WithHeadingRow, SkipsEmptyRows, Wit
     }
 
 
-    protected function parseAmount($value): ?float
+    public static function parseAmount($value): ?float
     {
         if ($value === null || $value === '') return 0.0;
-        if (is_numeric($value)) return (float) $value;
+        if (is_int($value) || is_float($value)) return (float) $value;
 
         $value = str_replace([' ', "\xc2\xa0"], '', (string) $value);
+        if ($value === '') return 0.0;
 
         $hasComma = str_contains($value, ',');
         $hasDot = str_contains($value, '.');
 
-        if ($hasComma && $hasDot) {
+        if ($hasDot && !$hasComma && preg_match('/^-?\d{1,3}(\.\d{3})+$/', $value)) {
+            // Format Indonesia dengan pemisah ribuan titik, mis. 1.500.000 atau 1.500.
+            $value = str_replace('.', '', $value);
+        } elseif ($hasComma && !$hasDot && preg_match('/^-?\d{1,3}(,\d{3}){2,}$/', $value)) {
+            // Pemisah ribuan koma lebih dari satu, mis. 1,500,000.
+            $value = str_replace(',', '', $value);
+        } elseif ($hasComma && $hasDot) {
             $lastComma = strrpos($value, ',');
             $lastDot = strrpos($value, '.');
             if ($lastComma > $lastDot) {
