@@ -5,6 +5,8 @@ namespace App\Imports;
 use App\Models\JurnalUmum;
 use App\Models\SubAkunBiaya;
 use App\Models\SubDivision;
+use App\Support\JurnalRowHash;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\OnEachRow;
 use Maatwebsite\Excel\Concerns\SkipsEmptyRows;
@@ -21,6 +23,11 @@ class JurnalUmumImport implements OnEachRow, WithHeadingRow, SkipsEmptyRows, Wit
     public int $skipped = 0;
     public array $errors = [];
     public array $errorRows = [];
+    public int $duplicateCount = 0;
+    public float $totalDebet = 0;
+    public float $totalKredit = 0;
+    public ?string $tanggalAwal = null;
+    public ?string $tanggalAkhir = null;
 
     private bool $headerChecked = false;
     private Collection $validSubDivisi;
@@ -28,7 +35,7 @@ class JurnalUmumImport implements OnEachRow, WithHeadingRow, SkipsEmptyRows, Wit
     private array $pendingRows = [];
     private array $headingColumnMap = [];
 
-    public function __construct()
+    public function __construct(private ?int $batchId = null)
     {
         $this->validSubDivisi = SubDivision::pluck('id', 'name')
             ->mapWithKeys(fn ($id, $name) => [self::normalizeName($name) => $id]);
@@ -95,13 +102,19 @@ class JurnalUmumImport implements OnEachRow, WithHeadingRow, SkipsEmptyRows, Wit
             return;
         }
 
+        $keteranganValue = $keterangan !== '' ? $keterangan : null;
         $this->pendingRows[] = [
-            'tanggal' => $tanggal,
-            'keterangan' => $keterangan !== '' ? $keterangan : null,
-            'sub_divisi_id' => $subDivisiId,
-            'sub_akun_biaya_id' => $subAkunId,
-            'debet' => $debet,
-            'kredit' => $kredit,
+            'payload' => [
+                'tanggal' => $tanggal,
+                'keterangan' => $keteranganValue,
+                'sub_divisi_id' => $subDivisiId,
+                'sub_akun_biaya_id' => $subAkunId,
+                'debet' => $debet,
+                'kredit' => $kredit,
+                'row_hash' => JurnalRowHash::make($tanggal, $subDivisiId, $subAkunId, $debet, $kredit, $keteranganValue),
+            ],
+            'display' => $this->displayValues($row, $data),
+            'row_index' => $rowIndex,
         ];
     }
 
@@ -185,16 +198,53 @@ class JurnalUmumImport implements OnEachRow, WithHeadingRow, SkipsEmptyRows, Wit
 
     protected function addErrorRow(Row $row, array $data, string $message, int $rowIndex): void
     {
-        $this->errorRows[] = [
-            $this->getDisplayValue($row, $data, 'tanggal'),
-            $this->getDisplayValue($row, $data, 'keterangan'),
-            $this->getDisplayValue($row, $data, 'toko'),
-            $this->getDisplayValue($row, $data, 'kategori'),
-            $this->getDisplayValue($row, $data, 'debet'),
-            $this->getDisplayValue($row, $data, 'kredit'),
-            $message,
-            $rowIndex,
-        ];
+        $this->errorRows[] = [...$this->displayValues($row, $data), $message, $rowIndex];
+    }
+
+    protected function displayValues(Row $row, array $data): array
+    {
+        return array_map(
+            fn ($key) => $this->getDisplayValue($row, $data, $key),
+            ['tanggal', 'keterangan', 'toko', 'kategori', 'debet', 'kredit']
+        );
+    }
+
+    /**
+     * Tandai baris yang sama persis dengan data jurnal yang sudah tersimpan.
+     * Baris kembar di dalam file yang sama tetap diperbolehkan.
+     */
+    protected function flagDuplicates(): void
+    {
+        $hashes = array_values(array_unique(array_map(fn ($p) => $p['payload']['row_hash'], $this->pendingRows)));
+        $existing = [];
+        foreach (array_chunk($hashes, 500) as $chunk) {
+            DB::table('jurnal_umum')
+                ->whereIn('row_hash', $chunk)
+                ->select('row_hash', DB::raw('MAX(import_batch_id) as batch_id'))
+                ->groupBy('row_hash')
+                ->get()
+                ->each(function ($r) use (&$existing) {
+                    $existing[$r->row_hash] = $r->batch_id;
+                });
+        }
+
+        if (empty($existing)) {
+            return;
+        }
+
+        foreach ($this->pendingRows as $pending) {
+            $hash = $pending['payload']['row_hash'];
+            if (!array_key_exists($hash, $existing)) {
+                continue;
+            }
+            $batchId = $existing[$hash];
+            $source = $batchId ? 'batch #'.str_pad((string) $batchId, 4, '0', STR_PAD_LEFT) : 'data lama';
+            $message = "duplikat: baris yang sama sudah ada ({$source})";
+            $this->errors[] = "Baris {$pending['row_index']}: {$message}";
+            $this->errorRows[] = [...$pending['display'], $message, $pending['row_index']];
+            $this->skipped++;
+            $this->duplicateCount++;
+        }
     }
 
     protected static function normalizeName(?string $value): string
@@ -322,10 +372,30 @@ class JurnalUmumImport implements OnEachRow, WithHeadingRow, SkipsEmptyRows, Wit
                     return;
                 }
 
-                foreach ($this->pendingRows as $payload) {
-                    JurnalUmum::create($payload);
+                $this->flagDuplicates();
+                if ($this->duplicateCount > 0) {
+                    return;
                 }
-                $this->created = count($this->pendingRows);
+
+                $now = now();
+                $records = array_map(function ($pending) use ($now) {
+                    return $pending['payload'] + [
+                        'import_batch_id' => $this->batchId,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ];
+                }, $this->pendingRows);
+
+                foreach (array_chunk($records, 500) as $chunk) {
+                    JurnalUmum::insert($chunk);
+                }
+
+                $this->created = count($records);
+                $this->totalDebet = array_sum(array_column($records, 'debet'));
+                $this->totalKredit = array_sum(array_column($records, 'kredit'));
+                $dates = array_column($records, 'tanggal');
+                $this->tanggalAwal = min($dates);
+                $this->tanggalAkhir = max($dates);
             },
         ];
     }

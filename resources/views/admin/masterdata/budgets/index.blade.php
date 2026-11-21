@@ -34,6 +34,15 @@
                     <div class="separator border-gray-200"></div>
                     <div class="px-7 py-5">
                         <div class="mb-10">
+                            <label class="form-label fs-6 fw-bold">Tahun:</label>
+                            <select id="filter_budget_tahun" class="form-select form-select-solid fw-bolder">
+                                <option value="">Semua</option>
+                                @foreach($tahunOptions as $tahun)
+                                    <option value="{{ $tahun }}" @selected($tahun === (int) now()->year)>{{ $tahun }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="mb-10">
                             <label class="form-label fs-6 fw-bold">Divisi:</label>
                             <select id="filter_budget_division" class="form-select form-select-solid fw-bolder" data-placeholder="Select option" data-allow-clear="true">
                                 <option value="">Semua</option>
@@ -71,7 +80,8 @@
                         <th>ID</th>
                         <th>Divisi</th>
                         <th>Akun Pembayaran</th>
-                        <th>Jumlah</th>
+                        <th>Periode</th>
+                        <th class="text-end">Jumlah</th>
                         <th class="text-end">Aksi</th>
                     </tr>
                 </thead>
@@ -120,6 +130,24 @@
                         </select>
                         <div class="invalid-feedback" id="error_akun_biaya_id"></div>
                     </div>
+                    <div class="row mb-7">
+                        <div class="col-5 fv-row">
+                            <label class="required fs-6 fw-bold form-label mb-2">Tahun</label>
+                            <input type="number" class="form-control form-control-solid" name="tahun" id="budget_tahun" min="2000" max="2100" value="{{ now()->year }}" required />
+                            <div class="invalid-feedback d-block" id="error_tahun"></div>
+                        </div>
+                        <div class="col-7 fv-row">
+                            <label class="required fs-6 fw-bold form-label mb-2">Periode</label>
+                            <select name="bulan" id="budget_bulan" class="form-select form-select-solid">
+                                <option value="">Tahunan (satu tahun penuh)</option>
+                                @foreach($namaBulan as $no => $nama)
+                                    <option value="{{ $no }}">Bulan {{ $nama }}</option>
+                                @endforeach
+                            </select>
+                            <div class="invalid-feedback d-block" id="error_bulan"></div>
+                        </div>
+                        <div class="form-text">Budget tahunan dibagi rata per bulan saat laporan menampilkan sebagian tahun. Dalam satu tahun, pilih salah satu: tahunan atau bulanan.</div>
+                    </div>
                     <div class="fv-row mb-7">
                         <label class="required fs-6 fw-bold form-label mb-2">Jumlah</label>
                         <input type="number" class="form-control form-control-solid" name="amount" id="budget_amount" min="0" step="0.01" required />
@@ -161,6 +189,10 @@
         const resetBtn = document.getElementById('filter_budgets_reset');
         const divisionFilter = document.getElementById('filter_budget_division');
         const akunFilter = document.getElementById('filter_budget_akun');
+        const tahunFilter = document.getElementById('filter_budget_tahun');
+        const formTahun = document.getElementById('budget_tahun');
+        const formBulan = document.getElementById('budget_bulan');
+        const defaultTahun = '{{ now()->year }}';
         const form = document.getElementById('budget_form');
         const modalEl = document.getElementById('modal_budget_form');
         const modal = modalEl ? new bootstrap.Modal(modalEl) : null;
@@ -193,13 +225,14 @@
             processing: true,
             serverSide: true,
             dom: 'rtip',
-            order: [[0, 'desc']],
+            ordering: false,
             ajax: {
                 url: dataUrl,
                 dataSrc: 'data',
                 data: function(params) {
                     params.q = searchInput?.value || '';
                     params.division_id = divisionFilter?.value || '';
+                    params.tahun = tahunFilter?.value || '';
                     params.akun_biaya_id = akunFilter?.value || '';
                 }
             },
@@ -207,9 +240,10 @@
                 { data: 'id' },
                 { data: 'division' },
                 { data: 'akun_biaya' },
-                { data: 'amount', render: (data) => formatAmount(data) },
+                { data: 'periode', render: (data, type, row) => `<span class="badge ${row.bulan ? 'badge-light-info' : 'badge-light-primary'}">${data}</span>` },
+                { data: 'amount', className: 'text-end', render: (data) => formatAmount(data) },
                 { data: 'id', orderable:false, searchable:false, className:'text-end', render: (data, type, row)=>{
-                    const editItem = `<div class="menu-item px-3"><a href="#" class="menu-link px-3 btn-edit" data-id="${data}" data-division="${row.division_id}" data-akun="${row.akun_biaya_id}" data-amount="${row.amount}">Edit</a></div>`;
+                    const editItem = `<div class="menu-item px-3"><a href="#" class="menu-link px-3 btn-edit" data-id="${data}" data-division="${row.division_id}" data-akun="${row.akun_biaya_id}" data-amount="${row.amount}" data-tahun="${row.tahun}" data-bulan="${row.bulan ?? ''}">Edit</a></div>`;
                     const delItem = `<div class="menu-item px-3"><a href="#" class="menu-link px-3 text-danger btn-delete" data-id="${data}">Hapus</a></div>`;
                     return `
                         <div class="text-end">
@@ -243,6 +277,7 @@
                     $(divisionFilter).val('').trigger('change');
                 }
             }
+            if (tahunFilter) tahunFilter.value = '';
             if (akunFilter) {
                 akunFilter.value = '';
                 if (typeof $ !== 'undefined' && $(akunFilter).data('select2')) {
@@ -257,12 +292,14 @@
             if (formId) formId.value = '';
             setSelectValue(formDivision, '');
             setSelectValue(formAkun, '');
+            if (formTahun) formTahun.value = tahunFilter?.value || defaultTahun;
+            if (formBulan) formBulan.value = '';
             clearErrors();
             if (titleEl) titleEl.textContent = 'Add Budget';
         });
 
         const clearErrors = () => {
-            ['error_division_id','error_akun_biaya_id','error_amount'].forEach(id => {
+            ['error_division_id','error_akun_biaya_id','error_amount','error_tahun','error_bulan'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.textContent = '';
             });
@@ -328,6 +365,8 @@
             if (!form) return;
             formId.value = id;
             formAmount.value = amount ?? '';
+            if (formTahun) formTahun.value = this.getAttribute('data-tahun') || defaultTahun;
+            if (formBulan) formBulan.value = this.getAttribute('data-bulan') || '';
             setSelectValue(formDivision, divisionId || '');
             setSelectValue(formAkun, akunId || '');
             clearErrors();

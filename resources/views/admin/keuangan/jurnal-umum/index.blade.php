@@ -1,16 +1,247 @@
 @extends('layouts.admin')
 
-@section('title', 'Import Jurnal Umum')
-@section('page_title', 'Import Jurnal Umum')
+@section('title', 'Jurnal Umum')
+@section('page_title', 'Jurnal Umum')
 
 @section('content')
+@php
+    $rp = fn ($v) => 'Rp '.number_format((float) $v, 0, ',', '.');
+    $statusBadge = [
+        'berhasil' => ['badge-light-success', 'Berhasil'],
+        'gagal' => ['badge-light-danger', 'Gagal'],
+        'ditolak' => ['badge-light-warning', 'Ditolak'],
+        'dibatalkan' => ['badge-light', 'Dibatalkan'],
+    ];
+    $tabUrl = fn ($t) => route('admin.keuangan.jurnal-umum.index', ['tab' => $t]);
+@endphp
 <div class="card">
     <div class="card-header border-0 pt-6">
         <div class="card-title">
-            <h2 class="fw-bolder mb-0">Import Jurnal Umum (Excel)</h2>
+            <h2 class="fw-bolder mb-0">Jurnal Umum</h2>
+        </div>
+        <div class="card-toolbar gap-2">
+            <a href="{{ $tabUrl('import') }}" class="btn btn-primary"><i class="fa-solid fa-file-import me-1"></i> Import Jurnal</a>
         </div>
     </div>
     <div class="card-body pt-0">
+        <ul class="nav nav-tabs nav-line-tabs mb-6 fs-6">
+            <li class="nav-item"><a class="nav-link @if($tab === 'transaksi') active @endif" href="{{ $tabUrl('transaksi') }}">Daftar Transaksi</a></li>
+            <li class="nav-item"><a class="nav-link @if($tab === 'riwayat') active @endif" href="{{ $tabUrl('riwayat') }}">Riwayat Import</a></li>
+            <li class="nav-item"><a class="nav-link @if($tab === 'import') active @endif" href="{{ $tabUrl('import') }}">Import Excel</a></li>
+        </ul>
+
+        @if($tab === 'transaksi')
+            <form method="GET" class="p-4 bg-light rounded mb-5">
+                <input type="hidden" name="tab" value="transaksi">
+                <div class="row g-3 align-items-end">
+                    <div class="col-12 col-lg-3">
+                        <label class="form-label fw-bold">Cari</label>
+                        <input type="text" name="q" value="{{ $filters['q'] }}" class="form-control form-control-solid" placeholder="Keterangan, toko, kategori...">
+                    </div>
+                    <div class="col-6 col-lg-2">
+                        <label class="form-label fw-bold">Dari tanggal</label>
+                        <input type="date" name="tanggal_dari" value="{{ $filters['tanggal_dari'] }}" class="form-control form-control-solid">
+                    </div>
+                    <div class="col-6 col-lg-2">
+                        <label class="form-label fw-bold">Sampai tanggal</label>
+                        <input type="date" name="tanggal_sampai" value="{{ $filters['tanggal_sampai'] }}" class="form-control form-control-solid">
+                    </div>
+                    <div class="col-6 col-lg-2">
+                        <label class="form-label fw-bold">Divisi</label>
+                        <select name="division_id" class="form-select form-select-solid">
+                            <option value="">Semua</option>
+                            @foreach($divisionOptions as $o)
+                                <option value="{{ $o->id }}" @selected($filters['division_id'] === $o->id)>{{ $o->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-6 col-lg-3">
+                        <label class="form-label fw-bold">Toko (Sub Divisi)</label>
+                        <select name="sub_divisi_id" class="form-select form-select-solid" data-control="select2" data-allow-clear="true" data-placeholder="Semua">
+                            <option value=""></option>
+                            @foreach($subDivisiOptions->groupBy('division_name') as $group => $items)
+                                <optgroup label="{{ $group }}">
+                                    @foreach($items as $o)
+                                        <option value="{{ $o->id }}" @selected($filters['sub_divisi_id'] === $o->id)>{{ $o->name }}</option>
+                                    @endforeach
+                                </optgroup>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-6 col-lg-3">
+                        <label class="form-label fw-bold">Akun</label>
+                        <select name="akun_id" class="form-select form-select-solid">
+                            <option value="">Semua</option>
+                            @foreach($akunOptions as $o)
+                                <option value="{{ $o->id }}" @selected($filters['akun_id'] === $o->id)>{{ $o->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-6 col-lg-3">
+                        <label class="form-label fw-bold">Kategori (Sub Akun)</label>
+                        <select name="sub_akun_id" class="form-select form-select-solid" data-control="select2" data-allow-clear="true" data-placeholder="Semua">
+                            <option value=""></option>
+                            @foreach($subAkunOptions->groupBy('akun_name') as $group => $items)
+                                <optgroup label="{{ $group }}">
+                                    @foreach($items as $o)
+                                        <option value="{{ $o->id }}" @selected($filters['sub_akun_id'] === $o->id)>{{ $o->name }}</option>
+                                    @endforeach
+                                </optgroup>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-6 col-lg-2">
+                        <label class="form-label fw-bold">Batch import</label>
+                        <select name="batch_id" class="form-select form-select-solid">
+                            <option value="">Semua</option>
+                            @foreach($batchOptions as $o)
+                                <option value="{{ $o->id }}" @selected($filters['batch_id'] === $o->id)>{{ $o->kode() }} · {{ \Illuminate\Support\Str::limit($o->file_name, 22) }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-6 col-lg-1">
+                        <label class="form-label fw-bold">Per hal.</label>
+                        <select name="per_page" class="form-select form-select-solid">
+                            @foreach([25, 50, 100] as $n)
+                                <option value="{{ $n }}" @selected($perPage === $n)>{{ $n }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-12 col-lg-3 d-flex flex-wrap gap-2 justify-content-lg-end align-items-center">
+                        <label class="form-check form-check-sm form-check-custom form-check-solid me-2">
+                            <input class="form-check-input" type="checkbox" name="tanpa_tanggal" value="1" @checked($filters['tanpa_tanggal'])>
+                            <span class="form-check-label">Hanya tanpa tanggal</span>
+                        </label>
+                        <button type="submit" class="btn btn-primary">Terapkan</button>
+                        <a href="{{ $tabUrl('transaksi') }}" class="btn btn-light">Reset</a>
+                    </div>
+                </div>
+            </form>
+
+            <div class="d-flex flex-wrap gap-8 px-4 py-3 mb-4 border rounded">
+                <div><div class="text-muted fs-7">Jumlah transaksi</div><div class="fw-bolder fs-4">{{ number_format($summary->jumlah ?? 0, 0, ',', '.') }}</div></div>
+                <div><div class="text-muted fs-7">Total debet</div><div class="fw-bolder fs-4">{{ $rp($summary->total_debet ?? 0) }}</div></div>
+                <div><div class="text-muted fs-7">Total kredit (biaya)</div><div class="fw-bolder fs-4">{{ $rp($summary->total_kredit ?? 0) }}</div></div>
+                <div><div class="text-muted fs-7">Toko terlibat</div><div class="fw-bolder fs-4">{{ number_format($summary->jumlah_toko ?? 0, 0, ',', '.') }}</div></div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-row-dashed table-striped align-middle fs-6 gy-3">
+                    <thead>
+                        <tr class="text-start text-gray-500 fw-bolder fs-7 text-uppercase">
+                            <th class="ps-3">Tanggal</th>
+                            <th>Batch</th>
+                            <th>Keterangan</th>
+                            <th>Toko · Divisi</th>
+                            <th>Kategori · Akun</th>
+                            <th class="text-end">Debet</th>
+                            <th class="text-end pe-3">Kredit</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($transaksi as $row)
+                            <tr>
+                                <td class="ps-3 text-nowrap">
+                                    @if($row->tanggal)
+                                        {{ \Illuminate\Support\Carbon::parse($row->tanggal)->translatedFormat('d M Y') }}
+                                    @else
+                                        <span class="badge badge-light-warning">Tanpa tanggal</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    @if($row->import_batch_id)
+                                        <a href="{{ route('admin.keuangan.jurnal-umum.index', ['tab' => 'transaksi', 'batch_id' => $row->import_batch_id]) }}" class="badge badge-light-primary">#{{ str_pad($row->import_batch_id, 4, '0', STR_PAD_LEFT) }}</a>
+                                    @else
+                                        <span class="text-muted fs-7">lama</span>
+                                    @endif
+                                </td>
+                                <td style="min-width:220px">{{ $row->keterangan ?? '-' }}</td>
+                                <td class="text-nowrap">{{ $row->toko }}<div class="text-muted fs-7">{{ $row->divisi }}</div></td>
+                                <td class="text-nowrap">{{ $row->kategori }}<div class="text-muted fs-7">{{ $row->akun }}</div></td>
+                                <td class="text-end text-nowrap">{!! (float) $row->debet ? e($rp($row->debet)) : '<span class="text-muted">–</span>' !!}</td>
+                                <td class="text-end text-nowrap pe-3">{!! (float) $row->kredit ? e($rp($row->kredit)) : '<span class="text-muted">–</span>' !!}</td>
+                            </tr>
+                        @empty
+                            <tr><td colspan="7" class="text-center text-muted py-10">Tidak ada transaksi untuk filter ini.</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+            <div class="d-flex flex-wrap justify-content-between align-items-center mt-4">
+                <div class="text-muted fs-7">
+                    @if($transaksi->total())
+                        Menampilkan {{ $transaksi->firstItem() }}–{{ $transaksi->lastItem() }} dari {{ number_format($transaksi->total(), 0, ',', '.') }} transaksi
+                    @endif
+                </div>
+                {{ $transaksi->onEachSide(1)->links('pagination::bootstrap-5') }}
+            </div>
+        @endif
+
+        @if($tab === 'riwayat')
+            <div class="text-muted fs-7 mb-4">
+                Setiap file yang di-import dicatat sebagai satu batch. Import yang salah bisa dibatalkan sendiri tanpa menghapus data lain.
+                File yang sama persis, atau baris yang sudah pernah masuk, otomatis ditolak.
+            </div>
+            <div class="table-responsive">
+                <table class="table table-row-dashed table-striped align-middle fs-6 gy-3">
+                    <thead>
+                        <tr class="text-start text-gray-500 fw-bolder fs-7 text-uppercase">
+                            <th class="ps-3">Batch</th>
+                            <th>Waktu import</th>
+                            <th>Nama file</th>
+                            <th>Oleh</th>
+                            <th>Rentang tanggal</th>
+                            <th class="text-end">Baris masuk</th>
+                            <th class="text-end">Baris error</th>
+                            <th class="text-end">Total kredit</th>
+                            <th>Status</th>
+                            <th class="text-end pe-3">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($batches as $b)
+                            @php [$badgeClass, $badgeText] = $statusBadge[$b->status] ?? ['badge-light', $b->status]; @endphp
+                            <tr>
+                                <td class="ps-3"><span class="badge badge-light-primary">{{ $b->kode() }}</span></td>
+                                <td class="text-nowrap">{{ $b->created_at->format('d/m/Y H:i') }}</td>
+                                <td>{{ $b->file_name }}</td>
+                                <td>{{ $b->user?->name ?? '-' }}</td>
+                                <td class="text-nowrap">
+                                    @if($b->tanggal_awal)
+                                        {{ $b->tanggal_awal->format('d/m/Y') }}@if($b->tanggal_akhir && !$b->tanggal_akhir->equalTo($b->tanggal_awal)) – {{ $b->tanggal_akhir->format('d/m/Y') }}@endif
+                                    @else
+                                        <span class="text-muted">–</span>
+                                    @endif
+                                </td>
+                                <td class="text-end">{{ number_format($b->rows_count, 0, ',', '.') }}</td>
+                                <td class="text-end">{{ $b->error_count ?: '0' }}</td>
+                                <td class="text-end text-nowrap">{{ $b->rows_count ? $rp($b->total_kredit) : '–' }}</td>
+                                <td>
+                                    <span class="badge {{ $badgeClass }}">{{ $badgeText }}</span>
+                                    @if($b->message)<div class="text-muted fs-8 mt-1">{{ $b->message }}</div>@endif
+                                    @if($b->status === 'dibatalkan' && $b->cancelled_at)
+                                        <div class="text-muted fs-8 mt-1">{{ $b->cancelled_at->format('d/m/Y H:i') }}@if($b->cancelledBy) oleh {{ $b->cancelledBy->name }}@endif</div>
+                                    @endif
+                                </td>
+                                <td class="text-end pe-3 text-nowrap">
+                                    @if($b->status === 'berhasil')
+                                        <a href="{{ route('admin.keuangan.jurnal-umum.index', ['tab' => 'transaksi', 'batch_id' => $b->id]) }}" class="btn btn-sm btn-light">Lihat</a>
+                                        <button type="button" class="btn btn-sm btn-light-danger btn-cancel-batch" data-url="{{ route('admin.keuangan.jurnal-umum.batches.destroy', $b) }}" data-kode="{{ $b->kode() }}" data-rows="{{ $b->rows_count }}">Batalkan</button>
+                                    @elseif($b->error_file_path)
+                                        <a href="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($b->error_file_path) }}" class="btn btn-sm btn-light"><i class="fa-solid fa-download me-1"></i> File error</a>
+                                    @endif
+                                </td>
+                            </tr>
+                        @empty
+                            <tr><td colspan="10" class="text-center text-muted py-10">Belum ada riwayat import.</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+            <div class="d-flex justify-content-end mt-4">{{ $batches->links('pagination::bootstrap-5') }}</div>
+        @endif
+
+        @if($tab === 'import')
         <form id="jurnal_import_form" class="form">
             @csrf
             <div class="mb-10">
@@ -33,6 +264,8 @@
                     <li><code>debet</code> dan <code>kredit</code> bernilai angka >= 0. Boleh pakai pemisah ribuan.</li>
                     <li>Baris kosong akan diabaikan. Maksimal 20 error akan ditampilkan pada ringkasan.</li>
                     <li>Jika ada error, sistem akan menyediakan file Excel berisi semua baris error untuk diunduh.</li>
+                    <li>File yang sama persis dengan import sebelumnya akan ditolak. Baris yang sama persis (tanggal, toko, kategori, debet, kredit, keterangan) dengan data yang sudah ada juga ditolak sebagai duplikat.</li>
+                    <li>Setiap import tercatat di tab <a href="{{ route('admin.keuangan.jurnal-umum.index', ['tab' => 'riwayat']) }}">Riwayat Import</a> dan bisa dibatalkan per import.</li>
                 </ul>
             </div>
             <div class="d-flex align-items-center gap-3">
@@ -72,6 +305,7 @@
                 </div>
             </div>
         </div>
+        @endif
     </div>
 </div>
 @endsection
@@ -81,6 +315,7 @@
     const importUrl = '{{ route('admin.keuangan.jurnal-umum.store') }}';
     const destroyUrl = '{{ route('admin.keuangan.jurnal-umum.destroy') }}';
     const csrfToken = '{{ csrf_token() }}';
+    const listUrl = '{{ route('admin.keuangan.jurnal-umum.index') }}';
 
     document.addEventListener('DOMContentLoaded', () => {
         const form = document.getElementById('jurnal_import_form');
@@ -175,7 +410,18 @@
                             }
                         });
                     } else {
-                        Swal.fire('Berhasil', json.message || 'Import selesai', 'success');
+                        Swal.fire({
+                            title: 'Import berhasil',
+                            text: `${json.created ?? 0} baris jurnal masuk sebagai batch ${json.batch ?? ''}.`,
+                            icon: 'success',
+                            showCancelButton: true,
+                            confirmButtonText: 'Lihat transaksinya',
+                            cancelButtonText: 'Tutup',
+                        }).then((result) => {
+                            if (result.isConfirmed && json.batch_id) {
+                                window.location.href = `${listUrl}?tab=transaksi&batch_id=${json.batch_id}`;
+                            }
+                        });
                     }
                 }
             } catch (err) {
@@ -186,6 +432,40 @@
             } finally {
                 setLoading(false);
             }
+        });
+
+        document.querySelectorAll('.btn-cancel-batch').forEach((btn) => {
+            btn.addEventListener('click', async () => {
+                const kode = btn.dataset.kode;
+                const rows = btn.dataset.rows;
+                if (typeof Swal !== 'undefined') {
+                    const confirm = await Swal.fire({
+                        title: `Batalkan import ${kode}?`,
+                        text: `${rows} baris jurnal dari import ini akan dihapus. Data dari import lain tidak terpengaruh.`,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Ya, batalkan',
+                        cancelButtonText: 'Tidak',
+                    });
+                    if (!confirm.isConfirmed) return;
+                } else if (!window.confirm(`Batalkan import ${kode}?`)) {
+                    return;
+                }
+                btn.disabled = true;
+                try {
+                    const res = await fetch(btn.dataset.url, {
+                        method: 'DELETE',
+                        headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
+                    });
+                    const json = await res.json().catch(() => ({}));
+                    if (!res.ok) throw new Error(json.message || 'Gagal membatalkan import.');
+                    if (typeof Swal !== 'undefined') await Swal.fire('Berhasil', json.message, 'success');
+                    window.location.reload();
+                } catch (err) {
+                    btn.disabled = false;
+                    if (typeof Swal !== 'undefined') Swal.fire('Error', err.message, 'error');
+                }
+            });
         });
 
         clearBtn?.addEventListener('click', async () => {

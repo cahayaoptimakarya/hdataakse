@@ -28,7 +28,7 @@ class Permission
         $action = $action ?: self::actionFromRoute($routeName);
         $baseRoute = self::resolveBaseRoute($routeName);
 
-        $menu = Menu::where('route', $baseRoute)->first();
+        $menu = self::menuForRoute($baseRoute);
         if (!$menu) {
             // If no mapped menu, allow by default to avoid blocking non-menu routes
             return true;
@@ -49,6 +49,28 @@ class Permission
             ->whereIn('role_id', $roleIds)
             ->where($col, true)
             ->exists();
+    }
+
+    /**
+     * Cari menu untuk route. Route turunan (mis. admin.x.jurnal-umum.batches.index)
+     * ikut menu induknya (admin.x.jurnal-umum.index) bila tidak punya menu sendiri.
+     */
+    protected static function menuForRoute(string $baseRoute): ?Menu
+    {
+        $candidate = $baseRoute;
+        while (true) {
+            $menu = Menu::where('route', $candidate)->first();
+            if ($menu) {
+                return $menu;
+            }
+            $parts = explode('.', $candidate);
+            // Minimal "admin.<grup>.index"; berhenti bila sudah tidak bisa naik lagi.
+            if (count($parts) <= 3 || end($parts) !== 'index') {
+                return null;
+            }
+            array_splice($parts, -2, 1);
+            $candidate = implode('.', $parts);
+        }
     }
 
     public static function viewableMenuIds(User $user)

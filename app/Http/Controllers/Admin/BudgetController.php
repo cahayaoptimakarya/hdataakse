@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AkunBiaya;
 use App\Models\Budget;
 use App\Models\Division;
+use App\Support\Periode;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -15,12 +16,23 @@ class BudgetController extends Controller
     {
         $divisions = Division::orderBy('name')->get(['id', 'name']);
         $akunBiaya = AkunBiaya::orderBy('name')->get(['id', 'name']);
-        return view('admin.masterdata.budgets.index', compact('divisions', 'akunBiaya'));
+        $tahunOptions = Periode::tahunOptions();
+        $namaBulan = Periode::NAMA_BULAN;
+        return view('admin.masterdata.budgets.index', compact('divisions', 'akunBiaya', 'tahunOptions', 'namaBulan'));
     }
 
     public function data(Request $request)
     {
-        $query = Budget::with(['division', 'akunBiaya'])->orderByDesc('id');
+        $query = Budget::with(['division', 'akunBiaya'])
+            ->orderByDesc('tahun')
+            ->orderByRaw('bulan IS NULL DESC')
+            ->orderBy('bulan')
+            ->orderByDesc('id');
+
+        $tahunFilter = $request->input('tahun');
+        if ($tahunFilter !== null && $tahunFilter !== '') {
+            $query->where('tahun', (int) $tahunFilter);
+        }
 
         $search = trim((string) $request->input('q', ''));
         if ($search !== '') {
@@ -62,6 +74,9 @@ class BudgetController extends Controller
                 'akun_biaya' => $budget->akunBiaya?->name ?? '-',
                 'akun_biaya_id' => $budget->akun_biaya_id,
                 'amount' => $budget->amount,
+                'tahun' => $budget->tahun,
+                'bulan' => $budget->bulan,
+                'periode' => $budget->periodeLabel(),
             ];
         });
 
@@ -75,11 +90,10 @@ class BudgetController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'division_id' => ['required', 'integer', 'exists:divisions,id'],
-            'akun_biaya_id' => ['required', 'integer', 'exists:akun_biaya,id'],
-            'amount' => ['required', 'numeric', 'min:0'],
-        ]);
+        $validated = $this->validatePayload($request);
+        if ($conflict = $this->conflictMessage($validated)) {
+            return response()->json(['message' => $conflict, 'errors' => ['bulan' => [$conflict]]], 422);
+        }
 
         DB::beginTransaction();
         try {
@@ -93,6 +107,8 @@ class BudgetController extends Controller
                     'division_id' => $budget->division_id,
                     'akun_biaya_id' => $budget->akun_biaya_id,
                     'amount' => $budget->amount,
+                    'tahun' => $budget->tahun,
+                    'bulan' => $budget->bulan,
                 ],
             ]);
         } catch (\Throwable $e) {
@@ -106,11 +122,10 @@ class BudgetController extends Controller
 
     public function update(Request $request, Budget $budget)
     {
-        $validated = $request->validate([
-            'division_id' => ['required', 'integer', 'exists:divisions,id'],
-            'akun_biaya_id' => ['required', 'integer', 'exists:akun_biaya,id'],
-            'amount' => ['required', 'numeric', 'min:0'],
-        ]);
+        $validated = $this->validatePayload($request);
+        if ($conflict = $this->conflictMessage($validated, $budget->id)) {
+            return response()->json(['message' => $conflict, 'errors' => ['bulan' => [$conflict]]], 422);
+        }
 
         DB::beginTransaction();
         try {
@@ -124,6 +139,8 @@ class BudgetController extends Controller
                     'division_id' => $budget->division_id,
                     'akun_biaya_id' => $budget->akun_biaya_id,
                     'amount' => $budget->amount,
+                    'tahun' => $budget->tahun,
+                    'bulan' => $budget->bulan,
                 ],
             ]);
         } catch (\Throwable $e) {
@@ -149,5 +166,49 @@ class BudgetController extends Controller
                 'error' => $e->getMessage(),
             ], 500);
         }
+    }
+
+    private function validatePayload(Request $request): array
+    {
+        $validated = $request->validate([
+            'division_id' => ['required', 'integer', 'exists:divisions,id'],
+            'akun_biaya_id' => ['required', 'integer', 'exists:akun_biaya,id'],
+            'tahun' => ['required', 'integer', 'min:2000', 'max:2100'],
+            'bulan' => ['nullable', 'integer', 'min:1', 'max:12'],
+            'amount' => ['required', 'numeric', 'min:0'],
+        ]);
+        $validated['bulan'] = isset($validated['bulan']) && $validated['bulan'] !== '' ? (int) $validated['bulan'] : null;
+
+        return $validated;
+    }
+
+    /**
+     * Dalam satu tahun, satu divisi × akun memakai budget tahunan ATAU bulanan,
+     * dan tiap bulan hanya boleh satu baris.
+     */
+    private function conflictMessage(array $data, ?int $ignoreId = null): ?string
+    {
+        $existing = Budget::where('division_id', $data['division_id'])
+            ->where('akun_biaya_id', $data['akun_biaya_id'])
+            ->where('tahun', $data['tahun'])
+            ->when($ignoreId, fn ($q) => $q->where('id', '!=', $ignoreId))
+            ->get(['bulan']);
+
+        if ($existing->isEmpty()) {
+            return null;
+        }
+        if ($data['bulan'] === null) {
+            return $existing->contains(fn ($b) => $b->bulan === null)
+                ? 'Budget tahunan untuk divisi, akun, dan tahun ini sudah ada. Silakan edit yang sudah ada.'
+                : 'Divisi dan akun ini sudah memakai budget bulanan di tahun tersebut. Hapus budget bulanannya dulu bila ingin memakai budget tahunan.';
+        }
+        if ($existing->contains(fn ($b) => $b->bulan === null)) {
+            return 'Divisi dan akun ini sudah memakai budget tahunan di tahun tersebut. Hapus budget tahunannya dulu bila ingin memakai budget bulanan.';
+        }
+        if ($existing->contains(fn ($b) => (int) $b->bulan === $data['bulan'])) {
+            return 'Budget untuk bulan ini sudah ada. Silakan edit yang sudah ada.';
+        }
+
+        return null;
     }
 }
