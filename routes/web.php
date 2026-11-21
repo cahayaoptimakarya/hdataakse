@@ -108,8 +108,8 @@ Route::middleware(['auth', 'verified', 'menu.permission'])->prefix('admin')->as(
         // Laporan
         Route::get('/laporan', [LaporanJurnalUmumController::class, 'index'])->name('laporan.index');
         Route::get('/laporan/export', [LaporanJurnalUmumController::class, 'export'])->name('laporan.export');
+        Route::get('/laporan/detail', [LaporanJurnalUmumController::class, 'detail'])->name('laporan.detail');
         Route::get('/laporan/export-divisi', [LaporanJurnalUmumController::class, 'exportDivisi'])->name('laporan.export-divisi');
-        Route::get('/laporan/sub-akun/{subAkunBiaya}/jurnal', [LaporanJurnalUmumController::class, 'subAkunJurnal'])->name('laporan.sub-akun-jurnal');
         Route::post('/laporan/sub-divisi-budget', [LaporanJurnalUmumController::class, 'saveSubDivisiBudget'])->name('laporan.sub-divisi-budget');
     });
 });

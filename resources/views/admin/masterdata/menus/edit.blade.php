@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
-@section('title', 'Edit Menu')
-@section('page_title', 'Edit Menu')
+@section('title', 'Ubah menu')
+@section('page_title', 'Ubah menu')
 
 @section('page_breadcrumbs')
     <span class="text-muted">Home</span>
@@ -10,7 +10,7 @@
     <span class="mx-2">-</span>
     <span class="text-muted">Menus</span>
     <span class="mx-2">-</span>
-    <span class="text-dark">Edit</span>
+    <span class="text-dark">Ubah</span>
 @endsection
 
 @section('content')
@@ -37,12 +37,12 @@
                         @error('route')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
                     <div class="mb-10">
-                        <label class="form-label">Icon</label>
+                        <label class="form-label">Ikon</label>
                         <input type="text" name="icon" value="{{ old('icon', $menu->icon) }}" class="form-control @error('icon') is-invalid @enderror form-control-solid" />
                         @error('icon')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
                     <div class="mb-10">
-                        <label class="form-label">Parent</label>
+                        <label class="form-label">Induk</label>
                         <select name="parent_id" class="form-select @error('parent_id') is-invalid @enderror form-select-solid">
                             <option value="">(Tidak ada)</option>
                             @foreach($parents as $p)

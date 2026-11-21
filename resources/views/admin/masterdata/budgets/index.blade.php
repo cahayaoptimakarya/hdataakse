@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
-@section('title', 'Budget')
-@section('page_title', 'Budget')
+@section('title', 'Budget per Periode')
+@section('page_title', 'Budget per Periode')
 
 @section('content')
 <div class="card">
@@ -14,7 +14,7 @@
                         <path d="M11 19C6.55556 19 3 15.4444 3 11C3 6.55556 6.55556 3 11 3C15.4444 3 19 6.55556 19 11C19 15.4444 15.4444 19 11 19ZM11 5C7.53333 5 5 7.53333 5 11C5 14.4667 7.53333 17 11 17C14.4667 17 17 14.4667 17 11C17 7.53333 14.4667 5 11 5Z" fill="black" />
                     </svg>
                 </span>
-                <input type="text" class="form-control form-control-solid w-250px ps-14" placeholder="Search budget" data-kt-filter="search" />
+                <input type="text" class="form-control form-control-solid w-250px ps-14" placeholder="Cari budget" data-kt-filter="search" />
             </div>
         </div>
         <div class="card-toolbar">
@@ -29,7 +29,7 @@
                 </button>
                 <div class="menu menu-sub menu-sub-dropdown w-300px w-md-325px" data-kt-menu="true" data-kt-menu-dismiss="true">
                     <div class="px-7 py-5">
-                        <div class="fs-5 text-dark fw-bolder">Filter Options</div>
+                        <div class="fs-5 text-dark fw-bolder">Opsi filter</div>
                     </div>
                     <div class="separator border-gray-200"></div>
                     <div class="px-7 py-5">
@@ -44,7 +44,7 @@
                         </div>
                         <div class="mb-10">
                             <label class="form-label fs-6 fw-bold">Divisi:</label>
-                            <select id="filter_budget_division" class="form-select form-select-solid fw-bolder" data-placeholder="Select option" data-allow-clear="true">
+                            <select id="filter_budget_division" class="form-select form-select-solid fw-bolder" data-placeholder="Pilih" data-allow-clear="true">
                                 <option value="">Semua</option>
                                 @foreach($divisions as $division)
                                     <option value="{{ $division->id }}">{{ $division->name }}</option>
@@ -53,7 +53,7 @@
                         </div>
                         <div class="mb-10">
                             <label class="form-label fs-6 fw-bold">Akun Pembayaran:</label>
-                            <select id="filter_budget_akun" class="form-select form-select-solid fw-bolder" data-placeholder="Select option" data-allow-clear="true">
+                            <select id="filter_budget_akun" class="form-select form-select-solid fw-bolder" data-placeholder="Pilih" data-allow-clear="true">
                                 <option value="">Semua</option>
                                 @foreach($akunBiaya as $akun)
                                     <option value="{{ $akun->id }}">{{ $akun->name }}</option>
@@ -62,12 +62,12 @@
                         </div>
                         <div class="d-flex justify-content-end">
                             <button type="button" class="btn btn-light btn-active-light-primary me-2" id="filter_budgets_reset">Reset</button>
-                            <button type="button" class="btn btn-primary" id="filter_budgets_apply">Apply</button>
+                            <button type="button" class="btn btn-primary" id="filter_budgets_apply">Terapkan</button>
                         </div>
                     </div>
                 </div>
                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modal_budget_form" id="btn_open_create_budget">
-                    Add Budget
+                    Tambah budget
                 </button>
             </div>
         </div>
@@ -79,7 +79,7 @@
                     <tr class="text-start text-gray-400 fw-bolder fs-7 text-uppercase gs-0">
                         <th>ID</th>
                         <th>Divisi</th>
-                        <th>Akun Pembayaran</th>
+                        <th>Akun</th>
                         <th>Periode</th>
                         <th class="text-end">Jumlah</th>
                         <th class="text-end">Aksi</th>
@@ -96,7 +96,7 @@
     <div class="modal-dialog modal-dialog-centered mw-650px">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 class="fw-bolder" id="modal_budget_title">Add Budget</h2>
+                <h2 class="fw-bolder" id="modal_budget_title">Tambah budget</h2>
                 <div class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal">
                     <span class="svg-icon svg-icon-1">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -157,7 +157,7 @@
                         <button type="button" class="btn btn-light me-3" data-bs-dismiss="modal">Batal</button>
                         <button type="submit" class="btn btn-primary">
                             <span class="indicator-label">Simpan</span>
-                            <span class="indicator-progress">Please wait...
+                            <span class="indicator-progress">Mohon tunggu...
                             <span class="spinner-border spinner-border-sm align-middle ms-2"></span></span>
                         </button>
                     </div>
@@ -243,12 +243,12 @@
                 { data: 'periode', render: (data, type, row) => `<span class="badge ${row.bulan ? 'badge-light-info' : 'badge-light-primary'}">${data}</span>` },
                 { data: 'amount', className: 'text-end', render: (data) => formatAmount(data) },
                 { data: 'id', orderable:false, searchable:false, className:'text-end', render: (data, type, row)=>{
-                    const editItem = `<div class="menu-item px-3"><a href="#" class="menu-link px-3 btn-edit" data-id="${data}" data-division="${row.division_id}" data-akun="${row.akun_biaya_id}" data-amount="${row.amount}" data-tahun="${row.tahun}" data-bulan="${row.bulan ?? ''}">Edit</a></div>`;
+                    const editItem = `<div class="menu-item px-3"><a href="#" class="menu-link px-3 btn-edit" data-id="${data}" data-division="${row.division_id}" data-akun="${row.akun_biaya_id}" data-amount="${row.amount}" data-tahun="${row.tahun}" data-bulan="${row.bulan ?? ''}">Ubah</a></div>`;
                     const delItem = `<div class="menu-item px-3"><a href="#" class="menu-link px-3 text-danger btn-delete" data-id="${data}">Hapus</a></div>`;
                     return `
                         <div class="text-end">
                             <a href="#" class="btn btn-sm btn-light btn-active-light-primary" data-kt-menu-trigger="click" data-kt-menu-placement="bottom-end">
-                                Actions
+                                Aksi
                                 <span class="svg-icon svg-icon-5 m-0">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
                                         <path d="M11.4343 12.7344L7.25 8.55005C6.83579 8.13583 6.16421 8.13584 5.75 8.55005C5.33579 8.96426 5.33579 9.63583 5.75 10.05L11.2929 15.5929C11.6834 15.9835 12.3166 15.9835 12.7071 15.5929L18.25 10.05C18.6642 9.63584 18.6642 8.96426 18.25 8.55005C17.8358 8.13584 17.1642 8.13584 16.75 8.55005L12.5657 12.7344C12.2533 13.0468 11.7467 13.0468 11.4343 12.7344Z" fill="black"></path>
@@ -295,7 +295,7 @@
             if (formTahun) formTahun.value = tahunFilter?.value || defaultTahun;
             if (formBulan) formBulan.value = '';
             clearErrors();
-            if (titleEl) titleEl.textContent = 'Add Budget';
+            if (titleEl) titleEl.textContent = 'Tambah budget';
         });
 
         const clearErrors = () => {
@@ -370,7 +370,7 @@
             setSelectValue(formDivision, divisionId || '');
             setSelectValue(formAkun, akunId || '');
             clearErrors();
-            if (titleEl) titleEl.textContent = 'Edit Budget';
+            if (titleEl) titleEl.textContent = 'Ubah budget';
             modal?.show();
         });
 

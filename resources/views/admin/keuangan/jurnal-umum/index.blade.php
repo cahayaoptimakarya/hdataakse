@@ -173,7 +173,7 @@
                         Menampilkan {{ $transaksi->firstItem() }}–{{ $transaksi->lastItem() }} dari {{ number_format($transaksi->total(), 0, ',', '.') }} transaksi
                     @endif
                 </div>
-                {{ $transaksi->onEachSide(1)->links('pagination::bootstrap-5') }}
+                <div class="ui-pager">{{ $transaksi->onEachSide(1)->links('pagination::bootstrap-5') }}</div>
             </div>
         @endif
 

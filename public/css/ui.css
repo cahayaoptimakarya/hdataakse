@@ -1,0 +1,204 @@
+/*
+ * Tampilan "Kontrol Biaya" (Tahap 2).
+ * File CSS biasa, tidak perlu build (cocok untuk shared hosting).
+ * Dimuat SETELAH CSS Metronic, jadi aturan di sini menimpa gaya bawaannya.
+ */
+:root {
+    --ui-bg: #f5f6f8;
+    --ui-panel: #ffffff;
+    --ui-ink: #0f172a;
+    --ui-ink2: #475569;
+    --ui-ink3: #94a3b8;
+    --ui-line: #e5e7eb;
+    --ui-line2: #f1f5f9;
+    --ui-brand: #2563eb;
+    --ui-brand-soft: #eff4ff;
+    --ui-side: #0b1424;
+    --ui-side2: #152036;
+    --ui-ok: #16a34a;
+    --ui-ok-soft: #dcfce7;
+    --ui-warn: #d97706;
+    --ui-warn-soft: #fef3c7;
+    --ui-bad: #dc2626;
+    --ui-bad-soft: #fee2e2;
+    --ui-side-w: 248px;
+}
+
+body.ui {
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--ui-bg);
+    color: var(--ui-ink);
+    font-size: 13.5px;
+    -webkit-font-smoothing: antialiased;
+}
+body.ui h1, body.ui h2, body.ui h3, body.ui h4, body.ui .fw-bolder { font-family: inherit; }
+.num, .ui .text-end { font-variant-numeric: tabular-nums; }
+.num { text-align: right; white-space: nowrap; }
+
+/* ---------- Kerangka ---------- */
+.ui-app { display: flex; min-height: 100vh; }
+.ui-side {
+    width: var(--ui-side-w); flex: 0 0 var(--ui-side-w);
+    background: var(--ui-side); color: #cbd5e1;
+    position: sticky; top: 0; height: 100vh; overflow-y: auto;
+    padding: 18px 14px 24px; z-index: 105;
+}
+.ui-logo { display: flex; align-items: center; gap: 10px; color: #fff; font-weight: 700; font-size: 15px; padding: 4px 8px 18px; text-decoration: none; }
+.ui-logo:hover { color: #fff; }
+.ui-logo i { width: 32px; height: 32px; border-radius: 9px; background: linear-gradient(135deg, #3b82f6, #06b6d4); display: grid; place-items: center; font-style: normal; font-size: 13px; color: #fff; }
+.ui-grp { font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; color: #64748b; padding: 16px 10px 6px; font-weight: 600; }
+.ui-nav { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; color: #cbd5e1; text-decoration: none; font-weight: 500; margin-bottom: 2px; }
+.ui-nav:hover { background: var(--ui-side2); color: #fff; }
+.ui-nav .ic { width: 18px; text-align: center; color: #64748b; font-size: 14px; }
+.ui-nav.on { background: var(--ui-side2); color: #fff; }
+.ui-nav.on .ic { color: #60a5fa; }
+.ui-nav .cnt { margin-left: auto; font-size: 11px; background: var(--ui-bad); color: #fff; border-radius: 10px; padding: 1px 7px; }
+
+.ui-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.ui-top {
+    height: 64px; background: var(--ui-panel); border-bottom: 1px solid var(--ui-line);
+    display: flex; align-items: center; gap: 12px; padding: 0 28px;
+    position: sticky; top: 0; z-index: 100;
+}
+.ui-crumb { color: var(--ui-ink3); font-size: 12px; line-height: 1.3; min-width: 0; }
+.ui-crumb a { color: var(--ui-ink3); }
+.ui-crumb strong { color: var(--ui-ink); font-size: 17px; font-weight: 650; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ui-sp { flex: 1; }
+.ui-toggle { display: none; border: 1px solid var(--ui-line); background: #fff; border-radius: 8px; width: 36px; height: 36px; }
+.ui-user { display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 4px 6px; border-radius: 10px; }
+.ui-user:hover { background: var(--ui-line2); }
+.ui-ava { width: 34px; height: 34px; border-radius: 50%; background: #c7d2fe; color: #3730a3; font-weight: 700; display: grid; place-items: center; font-size: 13px; }
+.ui-user .who { line-height: 1.2; }
+.ui-user .who b { display: block; font-size: 13px; }
+.ui-user .who small { color: var(--ui-ink3); }
+.ui-content { padding: 24px 28px 32px; flex: 1; }
+.ui-foot { padding: 14px 28px; color: var(--ui-ink3); font-size: 12px; border-top: 1px solid var(--ui-line); background: #fff; }
+
+@media (max-width: 991.98px) {
+    .ui-side { position: fixed; left: 0; top: 0; transform: translateX(-100%); transition: transform .2s ease; box-shadow: 10px 0 30px rgba(0,0,0,.2); }
+    body.ui-side-open .ui-side { transform: none; }
+    body.ui-side-open::after { content: ""; position: fixed; inset: 0; background: rgba(15,23,42,.35); z-index: 104; }
+    .ui-toggle { display: grid; place-items: center; }
+    .ui-top { padding: 0 16px; }
+    .ui-content { padding: 16px; }
+    .ui-user .who { display: none; }
+}
+
+/* ---------- Komponen Metronic disesuaikan ---------- */
+.ui .card { border: 1px solid var(--ui-line); border-radius: 12px; box-shadow: none; }
+.ui .card .card-header { min-height: 60px; border-bottom: 1px solid var(--ui-line) !important; padding: 0 20px; }
+.ui .card .card-header .card-title h2, .ui .card .card-header .card-title h3 { font-size: 15px; font-weight: 650; }
+.ui .card .card-body { padding: 20px; }
+.ui .btn { border-radius: 8px; font-weight: 550; font-size: 13px; padding: 8px 14px; }
+.ui .btn.btn-sm { padding: 5px 10px; font-size: 12px; }
+.ui .btn-primary { background: var(--ui-brand) !important; border-color: var(--ui-brand) !important; color: #fff !important; }
+.ui .btn-primary:hover { background: #1d4ed8 !important; }
+.ui .btn-light { background: #fff !important; border: 1px solid var(--ui-line) !important; color: var(--ui-ink) !important; }
+.ui .btn-light:hover { background: var(--ui-line2) !important; }
+.ui .form-control, .ui .form-select { border-radius: 8px; font-size: 13px; }
+.ui .form-control.form-control-solid, .ui .form-select.form-select-solid { background-color: #fff; border: 1px solid var(--ui-line); color: var(--ui-ink); }
+.ui .form-control.form-control-solid:focus, .ui .form-select.form-select-solid:focus { border-color: var(--ui-brand); box-shadow: 0 0 0 3px #dbeafe; }
+.ui .form-label { font-size: 11.5px; color: var(--ui-ink2); font-weight: 600; margin-bottom: 4px; }
+.ui .form-select.form-select-solid + .select2-container .select2-selection { background-color: #fff !important; border: 1px solid var(--ui-line) !important; }
+.ui .nav-tabs { border-bottom: 1px solid var(--ui-line); gap: 4px; }
+.ui .nav-tabs .nav-link { border: none; border-bottom: 2px solid transparent; color: var(--ui-ink2); font-weight: 550; padding: 10px 12px; margin-bottom: -1px; background: none; }
+.ui .nav-tabs .nav-link.active, .ui .nav-tabs .nav-link:hover { color: var(--ui-brand); border-bottom-color: var(--ui-brand); background: none; }
+.ui .badge { font-weight: 600; border-radius: 999px; padding: 4px 9px; font-size: 11px; }
+
+/* Tabel ramah data */
+.ui .table { font-size: 13px; }
+.ui .table thead th, .ui .table thead tr.text-gray-400 th {
+    font-size: 11px !important; text-transform: uppercase; letter-spacing: .04em; color: var(--ui-ink2) !important;
+    font-weight: 600; background: #f8fafc; border-bottom: 1px solid var(--ui-line) !important; white-space: nowrap;
+    padding-top: 10px !important; padding-bottom: 10px !important;
+}
+.ui .table tbody td { padding-top: 9px !important; padding-bottom: 9px !important; border-bottom: 1px solid var(--ui-line2); }
+.ui .table.table-striped > tbody > tr:nth-of-type(odd) > * { --bs-table-accent-bg: #fbfcfd; }
+.ui .table td.text-end, .ui .table th.text-end { font-variant-numeric: tabular-nums; }
+.ui .dataTables_wrapper .table { margin-top: 0 !important; }
+.ui .page-item.active .page-link { background: var(--ui-brand); }
+
+/* Filter bar */
+.ui-filter { background: #fff; border: 1px solid var(--ui-line); border-radius: 12px; padding: 14px 16px; }
+.ui-filter .row { --bs-gutter-y: .6rem; }
+
+/* KPI */
+.ui-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 1199.98px) { .ui-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 575.98px) { .ui-kpis { grid-template-columns: 1fr; } }
+.ui-kpi { background: #fff; border: 1px solid var(--ui-line); border-radius: 12px; padding: 16px 18px; }
+.ui-kpi .l { color: var(--ui-ink2); font-size: 12px; }
+.ui-kpi .v { font-size: 22px; font-weight: 700; margin-top: 6px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ui-kpi .s { font-size: 12px; margin-top: 6px; color: var(--ui-ink3); }
+.c-ok { color: var(--ui-ok) !important; } .c-warn { color: var(--ui-warn) !important; } .c-bad { color: var(--ui-bad) !important; }
+.bg-ok { background: var(--ui-ok) !important; } .bg-warn { background: var(--ui-warn) !important; } .bg-bad { background: var(--ui-bad) !important; }
+.b-ok { background: var(--ui-ok-soft) !important; color: #166534 !important; }
+.b-warn { background: var(--ui-warn-soft) !important; color: #92400e !important; }
+.b-bad { background: var(--ui-bad-soft) !important; color: #991b1b !important; }
+.b-gray { background: #f1f5f9 !important; color: #475569 !important; }
+.b-blue { background: var(--ui-brand-soft) !important; color: #1d4ed8 !important; }
+.ui-bar { height: 5px; border-radius: 3px; background: #eef2f6; overflow: hidden; margin-top: 5px; }
+.ui-bar > i { display: block; height: 100%; }
+.ui-legend { display: flex; gap: 14px; align-items: center; color: var(--ui-ink2); font-size: 12px; flex-wrap: wrap; }
+.ui-legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; margin-right: 5px; vertical-align: -1px; }
+.ui-muted { color: var(--ui-ink3); }
+
+/* Panel bergaris (list ringkas) */
+.ui-panel { background: #fff; border: 1px solid var(--ui-line); border-radius: 12px; }
+.ui-panel > .hd { display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--ui-line); }
+.ui-panel > .hd h3 { font-size: 14px; font-weight: 650; margin: 0; }
+.ui-panel > .hd small { color: var(--ui-ink3); }
+.ui-row { display: flex; align-items: center; gap: 10px; padding: 10px 18px; border-bottom: 1px solid var(--ui-line2); }
+.ui-row:last-child { border-bottom: none; }
+.ui-row .n { flex: 1; min-width: 0; }
+.ui-row .n small { display: block; color: var(--ui-ink3); font-size: 11.5px; }
+
+/* Matriks laporan */
+.ui-mx { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 13px; }
+.ui-mx th, .ui-mx td { border-right: 1px solid var(--ui-line2); border-bottom: 1px solid var(--ui-line2); padding: 9px 12px; }
+.ui-mx thead th { position: sticky; top: 0; z-index: 2; background: #f8fafc; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--ui-ink2); font-weight: 600; border-bottom: 1px solid var(--ui-line); white-space: nowrap; text-align: right; }
+.ui-mx thead th:first-child { text-align: left; }
+.ui-mx td:first-child, .ui-mx th:first-child { position: sticky; left: 0; z-index: 1; background: #fff; min-width: 230px; }
+.ui-mx thead th:first-child { z-index: 3; background: #f8fafc; }
+.ui-mx tr.ak td { background: #fbfcfe; font-weight: 650; border-top: 1px solid var(--ui-line); }
+.ui-mx tr.sub td { color: var(--ui-ink2); }
+.ui-mx tr.sub td:first-child { padding-left: 34px; }
+.ui-mx .cell { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; min-width: 132px; }
+.ui-mx .cell .r { font-weight: 650; color: var(--ui-ink); }
+.ui-mx .cell .b { font-size: 11px; color: var(--ui-ink3); margin-top: 2px; font-weight: 500; }
+.ui-mx .cell .b span { font-weight: 650; }
+.ui-mx tr.gt td { background: #0f172a !important; color: #fff; font-weight: 700; }
+.ui-mx tr.gt td .r { color: #fff; }
+.ui-mx tr.gt td .b { color: #94a3b8; }
+.ui-mx .lnk { color: var(--ui-ink2); border: 0; border-bottom: 1px dashed #cbd5e1; font: inherit; cursor: pointer; background: none; padding: 0; }
+.ui-mx .lnk:hover { color: var(--ui-brand); border-color: var(--ui-brand); }
+.ui-mx td.clk { cursor: pointer; }
+.ui-mx td.clk:hover { background: #eef4ff; }
+.ui-scroll { overflow: auto; max-height: calc(100vh - 220px); }
+
+/* Drawer detail */
+.ui-overlay { position: fixed; inset: 0; background: rgba(15,23,42,.35); z-index: 1050; display: none; }
+.ui-drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(620px, 100vw); background: #fff; box-shadow: -10px 0 30px rgba(0,0,0,.15); z-index: 1051; display: none; flex-direction: column; }
+.ui-drawer.open, .ui-overlay.open { display: flex; }
+.ui-drawer .dh { padding: 18px 20px; border-bottom: 1px solid var(--ui-line); }
+.ui-drawer .db { overflow: auto; flex: 1; }
+.ui-mini { display: flex; align-items: flex-end; gap: 6px; height: 100px; padding: 8px 0 0; }
+.ui-mini div { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; font-size: 10px; color: var(--ui-ink3); height: 100%; }
+.ui-mini div i { width: 100%; background: #93c5fd; border-radius: 3px 3px 0 0; display: block; min-height: 1px; }
+
+/* Grafik batang tren */
+.ui-chart { display: flex; align-items: flex-end; gap: 10px; height: 240px; padding: 10px 4px 0; border-bottom: 1px solid var(--ui-line); position: relative; }
+.ui-chart .col { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; position: relative; }
+.ui-chart .col .bar { width: 70%; max-width: 38px; background: #3b82f6; border-radius: 4px 4px 0 0; }
+.ui-chart .col .bar.over { background: var(--ui-bad); }
+.ui-chart .col .bud { position: absolute; left: 8%; right: 8%; border-top: 2px dashed #f59e0b; }
+.ui-chart-x { display: flex; gap: 10px; padding: 6px 4px 0; }
+.ui-chart-x div { flex: 1; text-align: center; font-size: 11px; color: var(--ui-ink2); }
+
+/* Laporan per toko: tombol ubah budget muncul saat sel disorot */
+.toko-cell .budget-edit { position: absolute; top: 4px; left: 4px; width: 24px !important; height: 24px !important; padding: 0 !important; opacity: 0; transition: opacity .15s; }
+.toko-cell:hover .budget-edit { opacity: 1; }
+/* Pager Laravel: halaman sudah menampilkan ringkasan sendiri, sembunyikan teks "Menampilkan x sampai y". */
+.ui .ui-pager nav .flex-sm-fill > div:first-child { display: none; }
+.ui .ui-pager nav .flex-sm-fill { justify-content: flex-end !important; }
+.ui .ui-pager .pagination { margin-bottom: 0; }

@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Exports\LaporanDivisiExport;
 use App\Exports\LaporanExport;
-use App\Models\SubAkunBiaya;
+use App\Services\CostReport;
 use App\Support\Periode;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -13,14 +13,16 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class LaporanJurnalUmumController extends Controller
 {
+    public const TABS = ['ringkasan', 'toko', 'tren', 'lewat'];
+
     public function index(Request $request)
     {
-        $report = $this->buildReportData($request);
-        $divisionReport = $this->buildDivisionDetailData($request);
-
-        $divisionOptions = DB::table('divisions')
-            ->orderBy('name')
-            ->get(['id', 'name']);
+        $periode = Periode::fromRequest($request);
+        $tab = $request->input('tab') === 'divisi' ? 'toko' : $request->input('tab');
+        $tab = in_array($tab, self::TABS, true) ? $tab : 'ringkasan';
+        $satuan = in_array($request->input('satuan'), ['penuh', 'ribu', 'juta'], true) ? $request->input('satuan') : 'juta';
+        $divisionIds = $this->ids($request, 'division_ids');
+        $akunIds = $this->ids($request, 'akun_ids');
 
         $akunOptions = DB::table('akun_biaya')
             ->where('id', '!=', 1)
@@ -28,70 +30,161 @@ class LaporanJurnalUmumController extends Controller
             ->orderBy('name')
             ->get(['id', 'name']);
 
-        $akunOptionsDivisi = $akunOptions;
-
-        $subDivisionOptionsQuery = DB::table('sub_divisions as sd')
-            ->join('divisions as d', 'd.id', '=', 'sd.division_id');
-        if (!empty($divisionReport['selected_division_ids'])) {
-            $subDivisionOptionsQuery->whereIn('d.id', $divisionReport['selected_division_ids']);
-        }
-        $subDivisionOptions = $subDivisionOptionsQuery
-            ->orderBy('d.name')
-            ->orderBy('sd.name')
-            ->get([
-                'sd.id',
-                'sd.name',
-                'sd.division_id',
-                'd.name as division_name',
-            ]);
-
-        $subAkunOptionsQuery = DB::table('sub_akun_biaya as sab')
-            ->join('akun_biaya as ab', 'ab.id', '=', 'sab.akun_biaya_id')
-            ->where('ab.id', '!=', 1)
-            ->whereRaw('LOWER(ab.name) != ?', ['kas']);
-        if (!empty($divisionReport['selected_akun_ids'])) {
-            $subAkunOptionsQuery->whereIn('ab.id', $divisionReport['selected_akun_ids']);
-        }
-        $subAkunOptions = $subAkunOptionsQuery
-            ->orderBy('ab.name')
-            ->orderBy('sab.name')
-            ->get([
-                'sab.id',
-                'sab.name',
-                'sab.akun_biaya_id',
-                'ab.name as akun_name',
-            ]);
-
-        $periode = Periode::fromRequest($request);
-        $undatedCount = $periode->isSemua()
-            ? 0
-            : DB::table('jurnal_umum')->whereNull('tanggal')->count();
-
-        return view('admin.keuangan.laporan-jurnal-umum.index', [
+        $data = [
+            'tab' => $tab,
+            'satuan' => $satuan,
             'periode' => $periode,
             'tahun_options' => Periode::tahunOptions(),
             'nama_bulan' => Periode::NAMA_BULAN,
-            'undated_count' => $undatedCount,
+            'undated_count' => $periode->isSemua() ? 0 : DB::table('jurnal_umum')->whereNull('tanggal')->count(),
             'budget_editable' => !$periode->isSemua() && $periode->jumlahBulan() === 12,
-            'divisions' => $report['divisions'],
-            'akun_groups' => $report['akun_groups'],
-            'grand_by_division' => $report['grand_by_division'],
-            'grand_total_debet' => $report['grand_total_debet'],
-            'grand_total_kredit' => $report['grand_total_kredit'],
-            'division_options' => $divisionOptions,
-            'selected_division_ids' => $report['selected_division_ids'],
+            'division_options' => DB::table('divisions')->orderBy('name')->get(['id', 'name']),
             'akun_options' => $akunOptions,
-            'selected_akun_ids' => $report['selected_akun_ids'],
-            'budget_map' => $report['budget_map'],
+            'selected_division_ids' => $divisionIds,
+            'selected_akun_ids' => $akunIds,
+        ];
+
+        if (in_array($tab, ['ringkasan', 'lewat'], true)) {
+            $report = new CostReport($periode);
+            $data['matrix'] = $report->matrix($divisionIds, $akunIds);
+            $data['positions'] = $report->positions($data['matrix']);
+        } elseif ($tab === 'tren') {
+            $data['tren_tahun'] = $periode->tahun ?? (int) now()->year;
+            $data['tren'] = CostReport::monthlyByAkun($data['tren_tahun'], $divisionIds, $akunIds);
+        } else {
+            $data += $this->tokoTabData($request);
+        }
+
+        return view('admin.keuangan.laporan-jurnal-umum.index', $data);
+    }
+
+    private function ids(Request $request, string $key): array
+    {
+        $ids = $request->input($key, []);
+        return collect(is_array($ids) ? $ids : [$ids])
+            ->map(fn ($id) => (int) $id)->filter(fn ($id) => $id > 0)->unique()->values()->all();
+    }
+
+    private function tokoTabData(Request $request): array
+    {
+        $divisionReport = $this->buildDivisionDetailData($request);
+
+        $subDivisionOptions = DB::table('sub_divisions as sd')
+            ->join('divisions as d', 'd.id', '=', 'sd.division_id')
+            ->when($divisionReport['selected_division_ids'], fn ($q, $ids) => $q->whereIn('d.id', $ids))
+            ->orderBy('d.name')->orderBy('sd.name')
+            ->get(['sd.id', 'sd.name', 'sd.division_id', 'd.name as division_name']);
+
+        $subAkunOptions = DB::table('sub_akun_biaya as sab')
+            ->join('akun_biaya as ab', 'ab.id', '=', 'sab.akun_biaya_id')
+            ->where('ab.id', '!=', 1)
+            ->whereRaw('LOWER(ab.name) != ?', ['kas'])
+            ->when($divisionReport['selected_akun_ids'], fn ($q, $ids) => $q->whereIn('ab.id', $ids))
+            ->orderBy('ab.name')->orderBy('sab.name')
+            ->get(['sab.id', 'sab.name', 'sab.akun_biaya_id', 'ab.name as akun_name']);
+
+        return [
             'division_detail_groups' => $divisionReport['division_groups'],
             'selected_division_ids_divisi' => $divisionReport['selected_division_ids'],
             'sub_divisi_budget_map' => $divisionReport['budget_map'],
             'sub_division_options' => $subDivisionOptions,
             'selected_sub_division_ids_divisi' => $divisionReport['selected_sub_division_ids'],
-            'akun_options_divisi' => $akunOptionsDivisi,
             'selected_akun_ids_divisi' => $divisionReport['selected_akun_ids'],
             'sub_akun_options_divisi' => $subAkunOptions,
             'selected_sub_akun_ids_divisi' => $divisionReport['selected_sub_akun_ids'],
+        ];
+    }
+
+    /**
+     * Rincian untuk panel detail: satu akun atau satu kategori, opsional per divisi atau toko.
+     * Berisi ringkasan per toko, per kategori, per bulan, dan transaksi terbaru.
+     */
+    public function detail(Request $request)
+    {
+        $v = $request->validate([
+            'akun_id' => ['nullable', 'integer'],
+            'sub_akun_id' => ['nullable', 'integer'],
+            'division_id' => ['nullable', 'integer'],
+            'sub_divisi_id' => ['nullable', 'integer'],
+        ]);
+        $periode = Periode::fromRequest($request);
+
+        $base = DB::table('jurnal_umum as ju')
+            ->join('sub_divisions as sd', 'sd.id', '=', 'ju.sub_divisi_id')
+            ->join('divisions as d', 'd.id', '=', 'sd.division_id')
+            ->join('sub_akun_biaya as sab', 'sab.id', '=', 'ju.sub_akun_biaya_id')
+            ->join('akun_biaya as ab', 'ab.id', '=', 'sab.akun_biaya_id')
+            ->where('ab.id', '!=', 1)
+            ->whereRaw('LOWER(ab.name) != ?', ['kas']);
+        $periode->applyToJurnal($base);
+        foreach (['akun_id' => 'ab.id', 'sub_akun_id' => 'sab.id', 'division_id' => 'd.id', 'sub_divisi_id' => 'sd.id'] as $key => $col) {
+            if (!empty($v[$key])) {
+                $base->where($col, $v[$key]);
+            }
+        }
+
+        $perToko = (clone $base)
+            ->select('sd.id', 'sd.name', 'd.name as division', DB::raw('SUM(ju.kredit) as total'), DB::raw('COUNT(*) as jumlah'))
+            ->groupBy('sd.id', 'sd.name', 'd.name')->orderByDesc('total')->get();
+        $perKategori = (clone $base)
+            ->select('sab.id', 'sab.name', 'ab.name as akun', DB::raw('SUM(ju.kredit) as total'), DB::raw('COUNT(*) as jumlah'))
+            ->groupBy('sab.id', 'sab.name', 'ab.name')->orderByDesc('total')->get();
+        $perTanggal = (clone $base)->whereNotNull('ju.tanggal')
+            ->select('ju.tanggal', DB::raw('SUM(ju.kredit) as total'))->groupBy('ju.tanggal')->get();
+        $perBulan = [];
+        foreach ($perTanggal as $r) {
+            $key = substr((string) $r->tanggal, 0, 7);
+            $perBulan[$key] = ($perBulan[$key] ?? 0) + (float) $r->total;
+        }
+        ksort($perBulan);
+        $jumlah = (clone $base)->count();
+        $rows = (clone $base)
+            ->select('ju.tanggal', 'ju.keterangan', 'sd.name as toko', 'd.name as division', 'sab.name as kategori', 'ab.name as akun', 'ju.debet', 'ju.kredit')
+            ->orderByRaw('ju.tanggal IS NULL')->orderByDesc('ju.tanggal')->orderByDesc('ju.id')
+            ->limit(100)->get();
+
+        // Budget: per toko bila toko dipilih, selain itu per divisi. Hanya untuk tingkat akun.
+        $budget = null;
+        $akunId = $v['akun_id'] ?? (!empty($v['sub_akun_id']) ? DB::table('sub_akun_biaya')->where('id', $v['sub_akun_id'])->value('akun_biaya_id') : null);
+        if ($akunId && empty($v['sub_akun_id'])) {
+            if (!empty($v['sub_divisi_id'])) {
+                $budget = $periode->budgetMap('sub_divisi_budgets', 'sub_divisi_id', [$v['sub_divisi_id']], [$akunId])[$akunId][$v['sub_divisi_id']] ?? null;
+            } else {
+                $divIds = !empty($v['division_id']) ? [$v['division_id']] : DB::table('divisions')->pluck('id')->all();
+                $map = $periode->budgetMap('budgets', 'division_id', $divIds, [$akunId]);
+                $budget = isset($map[$akunId]) ? array_sum($map[$akunId]) : null;
+            }
+        }
+
+        $title = collect([
+            !empty($v['sub_akun_id']) ? DB::table('sub_akun_biaya')->where('id', $v['sub_akun_id'])->value('name') : null,
+            $akunId ? DB::table('akun_biaya')->where('id', $akunId)->value('name') : 'Semua akun',
+        ])->filter()->implode(' · ');
+        $scope = !empty($v['sub_divisi_id'])
+            ? DB::table('sub_divisions')->where('id', $v['sub_divisi_id'])->value('name')
+            : (!empty($v['division_id']) ? DB::table('divisions')->where('id', $v['division_id'])->value('name') : 'Semua divisi');
+
+        $total = (float) $perToko->sum('total');
+
+        return response()->json([
+            'title' => $title,
+            'scope' => $scope.' · '.$periode->label(),
+            'total' => $total,
+            'budget' => $budget,
+            'pct' => $budget ? CostReport::pct($total, $budget) : null,
+            'jumlah' => $jumlah,
+            'per_toko' => $perToko,
+            'per_kategori' => $perKategori,
+            'per_bulan' => $perBulan,
+            'rows' => $rows,
+            'jurnal_url' => route('admin.keuangan.jurnal-umum.index', array_filter([
+                'tanggal_dari' => $periode->tanggalAwal(),
+                'tanggal_sampai' => $periode->tanggalAkhir(),
+                'division_id' => $v['division_id'] ?? null,
+                'sub_divisi_id' => $v['sub_divisi_id'] ?? null,
+                'akun_id' => empty($v['sub_akun_id']) ? $akunId : null,
+                'sub_akun_id' => $v['sub_akun_id'] ?? null,
+            ])),
         ]);
     }
 
@@ -122,103 +215,6 @@ class LaporanJurnalUmumController extends Controller
 
         $filename = 'laporan-per-divisi-'.now()->format('Ymd_His').'.xlsx';
         return Excel::download($export, $filename);
-    }
-
-    public function subAkunJurnal(Request $request, SubAkunBiaya $subAkunBiaya)
-    {
-        $selectedDivisionIds = $request->input('division_ids', []);
-        if (!is_array($selectedDivisionIds)) {
-            $selectedDivisionIds = [$selectedDivisionIds];
-        }
-        $selectedDivisionIdsDivisi = $request->input('division_ids_divisi', []);
-        if (!is_array($selectedDivisionIdsDivisi)) {
-            $selectedDivisionIdsDivisi = [$selectedDivisionIdsDivisi];
-        }
-        $selectedDivisionIds = collect(array_merge($selectedDivisionIds, $selectedDivisionIdsDivisi))
-            ->map(fn ($id) => (int) $id)
-            ->filter(fn ($id) => $id > 0)
-            ->unique()
-            ->values()
-            ->all();
-
-        $legacyDivisionId = $request->integer('division_id');
-        if ($legacyDivisionId > 0) {
-            $selectedDivisionIds[] = $legacyDivisionId;
-        }
-        $legacyDivisionIdDivisi = $request->integer('division_id_divisi');
-        if ($legacyDivisionIdDivisi > 0) {
-            $selectedDivisionIds[] = $legacyDivisionIdDivisi;
-        }
-        $selectedDivisionIds = collect($selectedDivisionIds)
-            ->map(fn ($id) => (int) $id)
-            ->filter(fn ($id) => $id > 0)
-            ->unique()
-            ->values()
-            ->all();
-
-        $query = DB::table('jurnal_umum as ju')
-            ->join('sub_divisions as sd', 'sd.id', '=', 'ju.sub_divisi_id')
-            ->join('divisions as d', 'd.id', '=', 'sd.division_id')
-            ->join('sub_akun_biaya as sab', 'sab.id', '=', 'ju.sub_akun_biaya_id')
-            ->join('akun_biaya as ab', 'ab.id', '=', 'sab.akun_biaya_id')
-            ->where('ju.sub_akun_biaya_id', $subAkunBiaya->id)
-            ->select(
-                'ju.id',
-                'ju.tanggal',
-                'ju.keterangan',
-                'sd.name as toko',
-                'd.name as division',
-                'ju.debet',
-                'ju.kredit',
-                'ab.name as akun',
-                'sab.name as sub_akun'
-            )
-            ->orderBy('ju.tanggal', 'desc')
-            ->orderBy('ju.id', 'desc');
-
-        if (!empty($selectedDivisionIds)) {
-            $query->whereIn('d.id', $selectedDivisionIds);
-        }
-        $periode = Periode::fromRequest($request);
-        $periode->applyToJurnal($query);
-
-        $rows = $query->get();
-
-        $summaryQuery = DB::table('jurnal_umum as ju')
-            ->join('sub_divisions as sd', 'sd.id', '=', 'ju.sub_divisi_id')
-            ->join('divisions as d', 'd.id', '=', 'sd.division_id')
-            ->where('ju.sub_akun_biaya_id', $subAkunBiaya->id)
-            ->select(
-                'd.id as division_id',
-                'd.name as division',
-                'sd.id as sub_divisi_id',
-                'sd.name as sub_divisi',
-                DB::raw('SUM(ju.debet) as total_debet'),
-                DB::raw('SUM(ju.kredit) as total_kredit')
-            )
-            ->groupBy('d.id', 'd.name', 'sd.id', 'sd.name')
-            ->orderBy('d.name')
-            ->orderBy('sd.name');
-
-        if (!empty($selectedDivisionIds)) {
-            $summaryQuery->whereIn('d.id', $selectedDivisionIds);
-        }
-        $periode->applyToJurnal($summaryQuery);
-
-        $summaryRows = $summaryQuery->get();
-
-        $subAkunBiaya->loadMissing('akunBiaya');
-
-        return response()->json([
-            'akun' => $subAkunBiaya->akunBiaya?->name,
-            'sub_akun' => $subAkunBiaya->name,
-            'rows' => $rows,
-            'summary_rows' => $summaryRows,
-            'summary_total_debet' => (float) $summaryRows->sum('total_debet'),
-            'summary_total_kredit' => (float) $summaryRows->sum('total_kredit'),
-            'total_debet' => (float) $rows->sum('debet'),
-            'total_kredit' => (float) $rows->sum('kredit'),
-        ]);
     }
 
     /**
@@ -445,7 +441,7 @@ class LaporanJurnalUmumController extends Controller
 
     private function buildDivisionDetailData(Request $request): array
     {
-        $selectedDivisionIds = $request->input('division_ids_divisi', []);
+        $selectedDivisionIds = array_merge((array) $request->input('division_ids_divisi', []), (array) $request->input('division_ids', []));
         if (!is_array($selectedDivisionIds)) {
             $selectedDivisionIds = [$selectedDivisionIds];
         }
@@ -460,7 +456,7 @@ class LaporanJurnalUmumController extends Controller
             ->values()
             ->all();
 
-        $selectedAkunIds = $request->input('akun_ids_divisi', []);
+        $selectedAkunIds = array_merge((array) $request->input('akun_ids_divisi', []), (array) $request->input('akun_ids', []));
         if (!is_array($selectedAkunIds)) {
             $selectedAkunIds = [$selectedAkunIds];
         }
@@ -475,7 +471,7 @@ class LaporanJurnalUmumController extends Controller
             ->values()
             ->all();
 
-        $selectedSubDivisionIds = $request->input('sub_division_ids_divisi', []);
+        $selectedSubDivisionIds = array_merge((array) $request->input('sub_division_ids_divisi', []), (array) $request->input('sub_division_ids', []));
         if (!is_array($selectedSubDivisionIds)) {
             $selectedSubDivisionIds = [$selectedSubDivisionIds];
         }
@@ -490,7 +486,7 @@ class LaporanJurnalUmumController extends Controller
             ->values()
             ->all();
 
-        $selectedSubAkunIds = $request->input('sub_akun_ids_divisi', []);
+        $selectedSubAkunIds = array_merge((array) $request->input('sub_akun_ids_divisi', []), (array) $request->input('sub_akun_ids', []));
         if (!is_array($selectedSubAkunIds)) {
             $selectedSubAkunIds = [$selectedSubAkunIds];
         }

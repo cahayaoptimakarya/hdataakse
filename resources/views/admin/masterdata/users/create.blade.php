@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
-@section('title', 'Tambah User')
-@section('page_title', 'Tambah User')
+@section('title', 'Tambah pengguna')
+@section('page_title', 'Tambah pengguna')
 
 @section('page_breadcrumbs')
     <span class="text-muted">Home</span>
@@ -31,12 +31,12 @@
                         @error('email')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
                     <div class="mb-10">
-                        <label class="form-label required">Password</label>
+                        <label class="form-label required">Kata sandi</label>
                         <input type="password" name="password" class="form-control @error('password') is-invalid @enderror form-control-solid" required />
                         @error('password')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
                     <div class="mb-10">
-                        <label class="form-label">Roles</label>
+                        <label class="form-label">Peran</label>
                         <select name="roles[]" class="form-select @error('roles') is-invalid @enderror form-select-solid" multiple data-control="select2" data-placeholder="Pilih Roles">
                             @foreach($roles as $r)
                                 <option value="{{ $r->id }}" @selected(collect(old('roles', []))->contains($r->id))>{{ $r->name }}</option>

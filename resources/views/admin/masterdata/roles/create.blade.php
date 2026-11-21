@@ -1,14 +1,14 @@
 @extends('layouts.admin')
 
-@section('title', 'Tambah Role')
-@section('page_title', 'Tambah Role')
+@section('title', 'Tambah peran')
+@section('page_title', 'Tambah peran')
 
 @section('page_breadcrumbs')
     <span class="text-muted">Home</span>
     <span class="mx-2">-</span>
     <span class="text-muted">Masterdata</span>
     <span class="mx-2">-</span>
-    <span class="text-muted">Roles</span>
+    <span class="text-muted">Peran</span>
     <span class="mx-2">-</span>
     <span class="text-dark">Tambah</span>
 @endsection
