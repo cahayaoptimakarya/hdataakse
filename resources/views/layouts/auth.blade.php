@@ -13,7 +13,7 @@
         .wrap { display: grid; grid-template-columns: 1fr 1fr; min-height: 100vh; }
         .l { background: linear-gradient(150deg, #0b1424 0%, #132a52 60%, #1d4ed8 130%); color: #e2e8f0; padding: 56px; display: flex; flex-direction: column; }
         .brand { display: flex; align-items: center; gap: 10px; color: #fff; font-weight: 700; font-size: 17px; }
-        .brand i { width: 32px; height: 32px; border-radius: 9px; background: linear-gradient(135deg, #3b82f6, #06b6d4); display: grid; place-items: center; font-style: normal; font-size: 13px; }
+        .brand img { width: 36px; height: 36px; border-radius: 50%; object-fit: contain; }
         .l h1 { font-size: 34px; line-height: 1.2; color: #fff; margin-top: auto; max-width: 460px; }
         .l p { color: #94a3b8; margin-top: 14px; max-width: 440px; font-size: 14px; line-height: 1.6; }
         .l ul { list-style: none; margin: 28px 0 auto; display: grid; gap: 10px; color: #cbd5e1; font-size: 14px; }
@@ -43,7 +43,7 @@
 <body>
 <div class="wrap">
     <div class="l">
-        <div class="brand"><i>KB</i>Kontrol Biaya</div>
+        <div class="brand"><img src="{{ asset('metronic/media/logos/logo-mark.png') }}" alt="Logo">Kontrol Biaya</div>
         <h1>Pantau realisasi biaya terhadap budget, per divisi dan per toko.</h1>
         <p>Import jurnal dari Excel, lihat serapan budget, dan ketahui lebih awal pos biaya yang melewati batas.</p>
         <ul>
