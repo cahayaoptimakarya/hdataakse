@@ -219,6 +219,118 @@ class CostReport
         ];
     }
 
+    /**
+     * Bandingkan beberapa periode berdampingan.
+     *
+     * @param  Periode[]  $periodes   periode pertama adalah pembanding dasar
+     * @param  string     $kelompok   akun | divisi | toko
+     * @return array{rows: Collection, totals: array}
+     *   rows: {key, name, sub (nama induk/divisi), level (0 induk, 1 kategori), akun_id, sub_akun_id, division_id, sub_divisi_id, r: [i => realisasi], b: [i => budget|null]}
+     */
+    public static function compare(array $periodes, string $kelompok, array $divisionIds = [], array $akunIds = []): array
+    {
+        $divs = $divisionIds ?: DB::table('divisions')->pluck('id')->all();
+        $akunList = DB::table('akun_biaya')->where('dikecualikan', false)
+            ->when($akunIds, fn ($x) => $x->whereIn('id', $akunIds))->pluck('id')->all();
+        $tokoIds = DB::table('sub_divisions')->whereIn('division_id', $divs)->pluck('id')->all();
+
+        $rows = [];
+        $put = function (string $key, array $meta, int $i, float $r) use (&$rows) {
+            $rows[$key] ??= $meta + ['r' => [], 'b' => []];
+            $rows[$key]['r'][$i] = ($rows[$key]['r'][$i] ?? 0) + $r;
+        };
+        $putBudget = function (string $key, array $meta, int $i, float $b) use (&$rows) {
+            $rows[$key] ??= $meta + ['r' => [], 'b' => []];
+            $rows[$key]['b'][$i] = ($rows[$key]['b'][$i] ?? 0) + $b;
+        };
+
+        foreach (array_values($periodes) as $i => $p) {
+            $q = (new self($p))->baseJurnal();
+            if ($divisionIds) {
+                $q->whereIn('d.id', $divisionIds);
+            }
+            if ($akunIds) {
+                $q->whereIn('ab.id', $akunIds);
+            }
+
+            if ($kelompok === 'divisi') {
+                foreach ($q->select('d.id', 'd.name', DB::raw('SUM(ju.kredit) as total'))->groupBy('d.id', 'd.name')->get() as $r) {
+                    $put('d'.$r->id, ['name' => $r->name, 'sub' => null, 'level' => 0, 'division_id' => $r->id], $i, (float) $r->total);
+                }
+                foreach ($p->budgetMap('budgets', 'division_id', $divs, $akunList) as $perDiv) {
+                    foreach ($perDiv as $divId => $amount) {
+                        $putBudget('d'.$divId, ['level' => 0, 'division_id' => $divId], $i, $amount);
+                    }
+                }
+            } elseif ($kelompok === 'toko') {
+                foreach ($q->select('sd.id', 'sd.name', 'd.name as division', DB::raw('SUM(ju.kredit) as total'))->groupBy('sd.id', 'sd.name', 'd.name')->get() as $r) {
+                    $put('t'.$r->id, ['name' => $r->name, 'sub' => $r->division, 'level' => 0, 'sub_divisi_id' => $r->id], $i, (float) $r->total);
+                }
+                foreach ($p->budgetMap('sub_divisi_budgets', 'sub_divisi_id', $tokoIds, $akunList) as $perToko) {
+                    foreach ($perToko as $tokoId => $amount) {
+                        $putBudget('t'.$tokoId, ['level' => 0, 'sub_divisi_id' => $tokoId], $i, $amount);
+                    }
+                }
+            } else {
+                $data = $q->select('ab.id as akun_id', 'ab.name as akun', 'sab.id as sub_id', 'sab.name as sub', DB::raw('SUM(ju.kredit) as total'))
+                    ->groupBy('ab.id', 'ab.name', 'sab.id', 'sab.name')->get();
+                foreach ($data as $r) {
+                    $put('a'.$r->akun_id, ['name' => $r->akun, 'sub' => null, 'level' => 0, 'akun_id' => $r->akun_id], $i, (float) $r->total);
+                    $put('a'.$r->akun_id.'-'.$r->sub_id, ['name' => $r->sub, 'sub' => $r->akun, 'level' => 1, 'akun_id' => $r->akun_id, 'sub_akun_id' => $r->sub_id], $i, (float) $r->total);
+                }
+                foreach ($p->budgetMap('budgets', 'division_id', $divs, $akunList) as $akunId => $perDiv) {
+                    $putBudget('a'.$akunId, ['level' => 0, 'akun_id' => $akunId], $i, array_sum($perDiv));
+                }
+            }
+        }
+
+        // Lengkapi nama untuk baris yang hanya punya budget.
+        $names = [
+            'a' => DB::table('akun_biaya')->pluck('name', 'id'),
+            'd' => DB::table('divisions')->pluck('name', 'id'),
+            't' => DB::table('sub_divisions')->pluck('name', 'id'),
+        ];
+        $n = count($periodes);
+        $out = collect($rows)->map(function ($row, $key) use ($names, $n) {
+            $row['key'] = $key;
+            $row['name'] ??= $names[$key[0]][(int) substr($key, 1)] ?? '?';
+            $row['sub'] ??= null;
+            foreach (range(0, $n - 1) as $i) {
+                $row['r'][$i] = $row['r'][$i] ?? 0.0;
+                $row['b'][$i] = $row['level'] === 0 ? ($row['b'][$i] ?? 0.0) : null;
+            }
+            ksort($row['r']);
+            ksort($row['b']);
+            return (object) $row;
+        });
+
+        // Urutkan induk menurut realisasi periode dasar terbesar, kategori di bawah induknya.
+        $parents = $out->where('level', 0)->sortByDesc(fn ($r) => [$r->r[0], array_sum($r->r)])->values();
+        $sorted = collect();
+        foreach ($parents as $parent) {
+            $sorted->push($parent);
+            if ($kelompok === 'akun') {
+                $out->where('level', 1)->where('akun_id', $parent->akun_id)
+                    ->sortByDesc(fn ($r) => [$r->r[0], array_sum($r->r)])->each(fn ($c) => $sorted->push($c));
+            }
+        }
+
+        $totals = ['r' => [], 'b' => []];
+        foreach (range(0, $n - 1) as $i) {
+            $totals['r'][$i] = $parents->sum(fn ($r) => $r->r[$i]);
+            // Budget toko biasanya hanya diisi untuk sebagian toko, jadi totalnya tidak dibandingkan.
+            $totals['b'][$i] = $kelompok === 'toko' ? 0.0 : $parents->sum(fn ($r) => $r->b[$i] ?? 0);
+        }
+
+        return ['rows' => $sorted, 'totals' => $totals];
+    }
+
+    /** Perubahan persen dari $dasar ke $nilai; null bila dasar 0. */
+    public static function change(float $dasar, float $nilai): ?float
+    {
+        return $dasar != 0 ? ($nilai - $dasar) / abs($dasar) * 100 : null;
+    }
+
     public static function pct(float $realisasi, float $budget): ?float
     {
         return $budget > 0 ? $realisasi / $budget * 100 : null;

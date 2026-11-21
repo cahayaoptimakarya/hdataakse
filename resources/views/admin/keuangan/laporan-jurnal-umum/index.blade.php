@@ -32,7 +32,8 @@
 @section('page_title', 'Laporan realisasi vs budget')
 
 @section('page_actions')
-    @if($tab === 'toko')
+    @if($tab === 'bandingkan')
+    @elseif($tab === 'toko')
         <a href="{{ route('admin.keuangan.laporan.export-divisi', request()->query()) }}" class="btn btn-light btn-sm"><i class="fa-solid fa-file-excel me-1"></i> Export Excel</a>
     @else
         <a href="{{ route('admin.keuangan.laporan.export', request()->query()) }}" class="btn btn-light btn-sm"><i class="fa-solid fa-file-excel me-1"></i> Export Excel</a>
@@ -94,11 +95,42 @@
                     <option value="penuh" @selected($satuan === 'penuh')>Rupiah penuh</option>
                 </select>
             </div>
+            @if($tab === 'bandingkan')
+                <div class="col-6 col-md-4 col-lg-auto">
+                    <label class="form-label">Bandingkan per</label>
+                    <select name="kelompok" class="form-select form-select-solid form-select-sm">
+                        <option value="akun" @selected($kelompok === 'akun')>Akun & kategori</option>
+                        <option value="divisi" @selected($kelompok === 'divisi')>Divisi</option>
+                        <option value="toko" @selected($kelompok === 'toko')>Toko</option>
+                    </select>
+                </div>
+            @endif
             <div class="col-auto ms-auto d-flex gap-2">
                 <a href="{{ route('admin.keuangan.laporan.index', ['tab' => $tab]) }}" class="btn btn-light btn-sm">Reset</a>
                 <button type="submit" class="btn btn-primary btn-sm">Terapkan</button>
             </div>
         </div>
+        @if($tab === 'bandingkan')
+            <input type="hidden" name="banding_set" value="1">
+            <div class="ui-banding mt-4 pt-4">
+                <div class="d-flex align-items-center flex-wrap gap-2 mb-3">
+                    <div class="fw-semibold">Periode pembanding</div>
+                    <div class="ui-muted fs-7">Periode utama diambil dari filter Tahun dan Bulan di atas. Bisa sampai {{ \App\Http\Controllers\Admin\LaporanJurnalUmumController::MAKS_PERIODE - 1 }} pembanding.</div>
+                </div>
+                <div id="banding_list" class="d-flex flex-column gap-2">
+                    @foreach(array_slice($periodes, 1) as $p)
+                        @include('admin.keuangan.laporan-jurnal-umum._banding-row', ['bp' => $p])
+                    @endforeach
+                </div>
+                <div class="d-flex flex-wrap gap-2 mt-3">
+                    <button type="button" class="btn btn-light btn-sm" id="banding_add"><i class="fa-solid fa-plus me-1"></i> Tambah periode</button>
+                    <button type="button" class="btn btn-light btn-sm" data-preset="tahun-lalu">Tahun lalu</button>
+                    <button type="button" class="btn btn-light btn-sm" data-preset="sebelumnya">Periode sebelumnya</button>
+                    <button type="button" class="btn btn-light btn-sm" data-preset="bulanan">Per bulan tahun ini</button>
+                </div>
+                <template id="banding_tpl">@include('admin.keuangan.laporan-jurnal-umum._banding-row', ['bp' => null])</template>
+            </div>
+        @endif
     </form>
 
     @if($undated_count > 0)
@@ -112,6 +144,7 @@
         <li class="nav-item"><a class="nav-link @if($tab === 'ringkasan') active @endif" href="{{ $tabUrl('ringkasan') }}">Ringkasan akun × divisi</a></li>
         <li class="nav-item"><a class="nav-link @if($tab === 'toko') active @endif" href="{{ $tabUrl('toko') }}">Per toko</a></li>
         <li class="nav-item"><a class="nav-link @if($tab === 'tren') active @endif" href="{{ $tabUrl('tren') }}">Tren bulanan</a></li>
+        <li class="nav-item"><a class="nav-link @if($tab === 'bandingkan') active @endif" href="{{ $tabUrl('bandingkan') }}">Bandingkan periode</a></li>
         <li class="nav-item"><a class="nav-link @if($tab === 'lewat') active @endif" href="{{ $tabUrl('lewat') }}">Pos melebihi budget</a></li>
     </ul>
 
@@ -139,6 +172,47 @@ document.addEventListener('DOMContentLoaded', () => {
             sel.closest('form')?.querySelectorAll('select[name="bulan_dari"], select[name="bulan_sampai"]').forEach((m) => { m.disabled = sel.value === 'semua'; });
         });
     });
+
+    // ---------- Periode pembanding ----------
+    const bList = document.getElementById('banding_list');
+    if (bList) {
+        const form = document.getElementById('laporan_filter');
+        const maks = {{ \App\Http\Controllers\Admin\LaporanJurnalUmumController::MAKS_PERIODE - 1 }};
+        const tpl = document.getElementById('banding_tpl');
+        const sync = (row) => {
+            const f = (n) => row.querySelector(`[data-f="${n}"]`).value;
+            row.querySelector('input[name="banding[]"]').value = `${f('tahun')}-${f('dari')}-${f('sampai')}`;
+        };
+        const add = (t, d, s) => {
+            if (bList.children.length >= maks) return null;
+            const row = tpl.content.firstElementChild.cloneNode(true);
+            const utama = { t: form.querySelector('[name=tahun]').value, d: form.querySelector('[name=bulan_dari]').value, s: form.querySelector('[name=bulan_sampai]').value };
+            row.querySelector('[data-f="tahun"]').value = t ?? String(Number(utama.t) - 1 - bList.children.length);
+            row.querySelector('[data-f="dari"]').value = d ?? utama.d;
+            row.querySelector('[data-f="sampai"]').value = s ?? utama.s;
+            if (row.querySelector('[data-f="tahun"]').selectedIndex < 0) row.querySelector('[data-f="tahun"]').selectedIndex = 0;
+            sync(row);
+            bList.appendChild(row);
+            return row;
+        };
+        bList.addEventListener('change', (e) => { const row = e.target.closest('.ui-banding-row'); if (row) sync(row); });
+        bList.addEventListener('click', (e) => { if (e.target.closest('[data-remove]')) e.target.closest('.ui-banding-row').remove(); });
+        document.getElementById('banding_add').addEventListener('click', () => add());
+        document.querySelectorAll('[data-preset]').forEach((btn) => btn.addEventListener('click', () => {
+            const t = Number(form.querySelector('[name=tahun]').value) || new Date().getFullYear();
+            const d = Number(form.querySelector('[name=bulan_dari]').value), s = Number(form.querySelector('[name=bulan_sampai]').value);
+            const len = s - d + 1;
+            bList.innerHTML = '';
+            if (btn.dataset.preset === 'tahun-lalu') { add(t - 1, d, s); add(t - 2, d, s); }
+            if (btn.dataset.preset === 'sebelumnya') { for (let k = 1; k <= maks && d - k * len >= 1; k++) add(t, d - k * len, d - k * len + len - 1); }
+            if (btn.dataset.preset === 'bulanan') {
+                // Utama = bulan terakhir, pembanding = bulan-bulan sebelumnya.
+                form.querySelector('[name=bulan_dari]').value = s;
+                for (let k = 1; k <= maks && s - k >= 1; k++) add(t, s - k, s - k);
+            }
+            form.requestSubmit();
+        }));
+    }
 
     // ---------- Panel detail ----------
     const detailUrl = @json(route('admin.keuangan.laporan.detail'));

@@ -14,7 +14,9 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class LaporanJurnalUmumController extends Controller
 {
-    public const TABS = ['ringkasan', 'toko', 'tren', 'lewat'];
+    public const TABS = ['ringkasan', 'toko', 'tren', 'bandingkan', 'lewat'];
+
+    public const MAKS_PERIODE = 5;
 
     public function index(Request $request)
     {
@@ -52,11 +54,60 @@ class LaporanJurnalUmumController extends Controller
             $data['tren_tahun'] = $periode->tahun ?? (int) now()->year;
             $data['tren'] = CostReport::monthlyByAkun($data['tren_tahun'], $divisionIds, $akunIds);
             $data['tren_lalu'] = CostReport::monthlyRealisasi($data['tren_tahun'] - 1, $divisionIds, $akunIds);
+        } elseif ($tab === 'bandingkan') {
+            $data['kelompok'] = in_array($request->input('kelompok'), ['akun', 'divisi', 'toko'], true) ? $request->input('kelompok') : 'akun';
+            $data['periodes'] = $this->comparePeriodes($request, $periode);
+            $data['banding'] = CostReport::compare($data['periodes'], $data['kelompok'], $divisionIds, $akunIds);
         } else {
             $data += $this->tokoTabData($request);
         }
 
         return view('admin.keuangan.laporan-jurnal-umum.index', $data);
+    }
+
+    /**
+     * Periode untuk tab Bandingkan. Periode pertama = filter utama; sisanya dari parameter banding[] ("2025-1-12").
+     * Tanpa banding[], dipakai periode yang sama tahun lalu dan periode sebelumnya dengan panjang yang sama.
+     *
+     * @return Periode[]
+     */
+    private function comparePeriodes(Request $request, Periode $utama): array
+    {
+        if ($utama->isSemua()) {
+            $utama = new Periode((int) now()->year, 1, (int) now()->month);
+        }
+        $list = [$utama];
+        $input = $request->input('banding');
+        if (is_array($input) || $request->boolean('banding_set')) {
+            foreach ((array) $input as $raw) {
+                if (preg_match('/^(\d{4})-(\d{1,2})-(\d{1,2})$/', (string) $raw, $m)) {
+                    $tahun = (int) $m[1];
+                    $dari = min(12, max(1, (int) $m[2]));
+                    $sampai = min(12, max(1, (int) $m[3]));
+                    if ($tahun >= 2000 && $tahun <= 2100) {
+                        $list[] = new Periode($tahun, min($dari, $sampai), max($dari, $sampai));
+                    }
+                }
+            }
+        } else {
+            $len = $utama->jumlahBulan();
+            if ($utama->bulanDari - $len >= 1) {
+                $list[] = new Periode($utama->tahun, $utama->bulanDari - $len, $utama->bulanDari - 1);
+            }
+            $list[] = new Periode($utama->tahun - 1, $utama->bulanDari, $utama->bulanSampai);
+        }
+
+        // Buang duplikat, batasi jumlah.
+        $seen = [];
+        $out = [];
+        foreach ($list as $p) {
+            $k = $p->tahun.'-'.$p->bulanDari.'-'.$p->bulanSampai;
+            if (!isset($seen[$k])) {
+                $seen[$k] = true;
+                $out[] = $p;
+            }
+        }
+        return array_slice($out, 0, self::MAKS_PERIODE);
     }
 
     private function ids(Request $request, string $key): array
