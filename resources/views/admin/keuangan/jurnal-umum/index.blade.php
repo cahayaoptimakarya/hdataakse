@@ -31,33 +31,33 @@
         </ul>
 
         @if($tab === 'transaksi')
-            <form method="GET" class="p-4 bg-light rounded mb-5">
+            <form method="GET" class="ui-filter mb-5">
                 <input type="hidden" name="tab" value="transaksi">
                 <div class="row g-3 align-items-end">
-                    <div class="col-12 col-lg-3">
-                        <label class="form-label fw-bold">Cari</label>
-                        <input type="text" name="q" value="{{ $filters['q'] }}" class="form-control form-control-solid" placeholder="Keterangan, toko, kategori...">
+                    <div class="col-12 col-md-6 col-lg-4">
+                        <label class="form-label">Cari</label>
+                        <input type="text" name="q" value="{{ $filters['q'] }}" class="form-control form-control-solid form-control-sm" placeholder="Keterangan, toko, kategori...">
                     </div>
                     <div class="col-6 col-lg-2">
-                        <label class="form-label fw-bold">Dari tanggal</label>
-                        <input type="date" name="tanggal_dari" value="{{ $filters['tanggal_dari'] }}" class="form-control form-control-solid">
+                        <label class="form-label">Dari tanggal</label>
+                        <input type="date" name="tanggal_dari" value="{{ $filters['tanggal_dari'] }}" class="form-control form-control-solid form-control-sm">
                     </div>
                     <div class="col-6 col-lg-2">
-                        <label class="form-label fw-bold">Sampai tanggal</label>
-                        <input type="date" name="tanggal_sampai" value="{{ $filters['tanggal_sampai'] }}" class="form-control form-control-solid">
+                        <label class="form-label">Sampai tanggal</label>
+                        <input type="date" name="tanggal_sampai" value="{{ $filters['tanggal_sampai'] }}" class="form-control form-control-solid form-control-sm">
                     </div>
                     <div class="col-6 col-lg-2">
-                        <label class="form-label fw-bold">Divisi</label>
-                        <select name="division_id" class="form-select form-select-solid">
+                        <label class="form-label">Divisi</label>
+                        <select name="division_id" class="form-select form-select-solid form-select-sm">
                             <option value="">Semua</option>
                             @foreach($divisionOptions as $o)
                                 <option value="{{ $o->id }}" @selected($filters['division_id'] === $o->id)>{{ $o->name }}</option>
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-6 col-lg-3">
-                        <label class="form-label fw-bold">Toko (Sub Divisi)</label>
-                        <select name="sub_divisi_id" class="form-select form-select-solid" data-control="select2" data-allow-clear="true" data-placeholder="Semua">
+                    <div class="col-6 col-lg-2">
+                        <label class="form-label">Toko (Sub Divisi)</label>
+                        <select name="sub_divisi_id" class="form-select form-select-solid form-select-sm" data-control="select2" data-allow-clear="true" data-placeholder="Semua">
                             <option value=""></option>
                             @foreach($subDivisiOptions->groupBy('division_name') as $group => $items)
                                 <optgroup label="{{ $group }}">
@@ -68,9 +68,9 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-6 col-lg-3">
-                        <label class="form-label fw-bold">Akun</label>
-                        <select name="akun_id" class="form-select form-select-solid">
+                    <div class="col-6 col-lg-2">
+                        <label class="form-label">Akun</label>
+                        <select name="akun_id" class="form-select form-select-solid form-select-sm">
                             <option value="">Semua</option>
                             @foreach($akunOptions as $o)
                                 <option value="{{ $o->id }}" @selected($filters['akun_id'] === $o->id)>{{ $o->name }}</option>
@@ -78,8 +78,8 @@
                         </select>
                     </div>
                     <div class="col-6 col-lg-3">
-                        <label class="form-label fw-bold">Kategori (Sub Akun)</label>
-                        <select name="sub_akun_id" class="form-select form-select-solid" data-control="select2" data-allow-clear="true" data-placeholder="Semua">
+                        <label class="form-label">Kategori (Sub Akun)</label>
+                        <select name="sub_akun_id" class="form-select form-select-solid form-select-sm" data-control="select2" data-allow-clear="true" data-placeholder="Semua">
                             <option value=""></option>
                             @foreach($subAkunOptions->groupBy('akun_name') as $group => $items)
                                 <optgroup label="{{ $group }}">
@@ -90,35 +90,35 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-6 col-lg-2">
-                        <label class="form-label fw-bold">Batch import</label>
-                        <select name="batch_id" class="form-select form-select-solid">
+                    <div class="col-6 col-lg-3">
+                        <label class="form-label">Batch import</label>
+                        <select name="batch_id" class="form-select form-select-solid form-select-sm">
                             <option value="">Semua</option>
                             @foreach($batchOptions as $o)
                                 <option value="{{ $o->id }}" @selected($filters['batch_id'] === $o->id)>{{ $o->kode() }} · {{ \Illuminate\Support\Str::limit($o->file_name, 22) }}</option>
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-6 col-lg-1">
-                        <label class="form-label fw-bold">Per hal.</label>
-                        <select name="per_page" class="form-select form-select-solid">
+                    <div class="col-6 col-lg-2">
+                        <label class="form-label">Per halaman</label>
+                        <select name="per_page" class="form-select form-select-solid form-select-sm">
                             @foreach([25, 50, 100] as $n)
                                 <option value="{{ $n }}" @selected($perPage === $n)>{{ $n }}</option>
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-12 col-lg-3 d-flex flex-wrap gap-2 justify-content-lg-end align-items-center">
+                    <div class="col-12 d-flex flex-wrap gap-2 align-items-center">
                         <label class="form-check form-check-sm form-check-custom form-check-solid me-2">
                             <input class="form-check-input" type="checkbox" name="tanpa_tanggal" value="1" @checked($filters['tanpa_tanggal'])>
                             <span class="form-check-label">Hanya tanpa tanggal</span>
                         </label>
-                        <button type="submit" class="btn btn-primary">Terapkan</button>
-                        <a href="{{ $tabUrl('transaksi') }}" class="btn btn-light">Reset</a>
+                        <a href="{{ $tabUrl('transaksi') }}" class="btn btn-light btn-sm ms-auto">Reset</a>
+                        <button type="submit" class="btn btn-primary btn-sm">Terapkan</button>
                     </div>
                 </div>
             </form>
 
-            <div class="d-flex flex-wrap gap-8 px-4 py-3 mb-4 border rounded">
+            <div class="d-flex flex-wrap gap-6 gap-md-8 px-4 py-3 mb-4 border rounded bg-white">
                 <div><div class="text-muted fs-7">Jumlah transaksi</div><div class="fw-bolder fs-4">{{ number_format($summary->jumlah ?? 0, 0, ',', '.') }}</div></div>
                 <div><div class="text-muted fs-7">Total debet</div><div class="fw-bolder fs-4">{{ $rp($summary->total_debet ?? 0) }}</div></div>
                 <div><div class="text-muted fs-7">Total kredit (biaya)</div><div class="fw-bolder fs-4">{{ $rp($summary->total_kredit ?? 0) }}</div></div>
@@ -126,7 +126,7 @@
             </div>
 
             <div class="table-responsive">
-                <table class="table table-row-dashed table-striped align-middle fs-6 gy-3">
+                <table class="table table-row-dashed table-striped align-middle fs-6 gy-3 ui-stack">
                     <thead>
                         <tr class="text-start text-gray-500 fw-bolder fs-7 text-uppercase">
                             <th class="ps-3">Tanggal</th>
@@ -141,28 +141,28 @@
                     <tbody>
                         @forelse($transaksi as $row)
                             <tr>
-                                <td class="ps-3 text-nowrap">
+                                <td class="ps-3 text-nowrap" data-label="Tanggal">
                                     @if($row->tanggal)
                                         {{ \Illuminate\Support\Carbon::parse($row->tanggal)->translatedFormat('d M Y') }}
                                     @else
                                         <span class="badge badge-light-warning">Tanpa tanggal</span>
                                     @endif
                                 </td>
-                                <td>
+                                <td data-label="Batch">
                                     @if($row->import_batch_id)
                                         <a href="{{ route('admin.keuangan.jurnal-umum.index', ['tab' => 'transaksi', 'batch_id' => $row->import_batch_id]) }}" class="badge badge-light-primary">#{{ str_pad($row->import_batch_id, 4, '0', STR_PAD_LEFT) }}</a>
                                     @else
                                         <span class="text-muted fs-7">lama</span>
                                     @endif
                                 </td>
-                                <td style="min-width:220px">{{ $row->keterangan ?? '-' }}</td>
-                                <td class="text-nowrap">{{ $row->toko }}<div class="text-muted fs-7">{{ $row->divisi }}</div></td>
-                                <td class="text-nowrap">{{ $row->kategori }}<div class="text-muted fs-7">{{ $row->akun }}</div></td>
-                                <td class="text-end text-nowrap">{!! (float) $row->debet ? e($rp($row->debet)) : '<span class="text-muted">–</span>' !!}</td>
-                                <td class="text-end text-nowrap pe-3">{!! (float) $row->kredit ? e($rp($row->kredit)) : '<span class="text-muted">–</span>' !!}</td>
+                                <td style="min-width:220px" class="ui-stack-main" data-label="">{{ $row->keterangan ?? '-' }}</td>
+                                <td class="text-nowrap" data-label="Toko">{{ $row->toko }}<div class="text-muted fs-7">{{ $row->divisi }}</div></td>
+                                <td class="text-nowrap" data-label="Kategori">{{ $row->kategori }}<div class="text-muted fs-7">{{ $row->akun }}</div></td>
+                                <td class="text-end text-nowrap" data-label="Debet">{!! (float) $row->debet ? e($rp($row->debet)) : '<span class="text-muted">–</span>' !!}</td>
+                                <td class="text-end text-nowrap pe-3" data-label="Kredit">{!! (float) $row->kredit ? e($rp($row->kredit)) : '<span class="text-muted">–</span>' !!}</td>
                             </tr>
                         @empty
-                            <tr><td colspan="7" class="text-center text-muted py-10">Tidak ada transaksi untuk filter ini.</td></tr>
+                            <tr><td colspan="7" data-label="" class="text-center text-muted py-10">Tidak ada transaksi untuk filter ini.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
@@ -183,7 +183,7 @@
                 File yang sama persis, atau baris yang sudah pernah masuk, otomatis ditolak.
             </div>
             <div class="table-responsive">
-                <table class="table table-row-dashed table-striped align-middle fs-6 gy-3">
+                <table class="table table-row-dashed table-striped align-middle fs-6 gy-3 ui-stack">
                     <thead>
                         <tr class="text-start text-gray-500 fw-bolder fs-7 text-uppercase">
                             <th class="ps-3">Batch</th>
@@ -202,28 +202,28 @@
                         @forelse($batches as $b)
                             @php [$badgeClass, $badgeText] = $statusBadge[$b->status] ?? ['badge-light', $b->status]; @endphp
                             <tr>
-                                <td class="ps-3"><span class="badge badge-light-primary">{{ $b->kode() }}</span></td>
-                                <td class="text-nowrap">{{ $b->created_at->format('d/m/Y H:i') }}</td>
-                                <td>{{ $b->file_name }}</td>
-                                <td>{{ $b->user?->name ?? '-' }}</td>
-                                <td class="text-nowrap">
+                                <td class="ps-3" data-label="Batch"><span class="badge badge-light-primary">{{ $b->kode() }}</span></td>
+                                <td class="text-nowrap" data-label="Waktu">{{ $b->created_at->format('d/m/Y H:i') }}</td>
+                                <td data-label="File">{{ $b->file_name }}</td>
+                                <td data-label="Oleh">{{ $b->user?->name ?? '-' }}</td>
+                                <td class="text-nowrap" data-label="Rentang">
                                     @if($b->tanggal_awal)
                                         {{ $b->tanggal_awal->format('d/m/Y') }}@if($b->tanggal_akhir && !$b->tanggal_akhir->equalTo($b->tanggal_awal)) – {{ $b->tanggal_akhir->format('d/m/Y') }}@endif
                                     @else
                                         <span class="text-muted">–</span>
                                     @endif
                                 </td>
-                                <td class="text-end">{{ number_format($b->rows_count, 0, ',', '.') }}</td>
-                                <td class="text-end">{{ $b->error_count ?: '0' }}</td>
-                                <td class="text-end text-nowrap">{{ $b->rows_count ? $rp($b->total_kredit) : '–' }}</td>
-                                <td>
+                                <td class="text-end" data-label="Baris masuk">{{ number_format($b->rows_count, 0, ',', '.') }}</td>
+                                <td class="text-end" data-label="Baris error">{{ $b->error_count ?: '0' }}</td>
+                                <td class="text-end text-nowrap" data-label="Total kredit">{{ $b->rows_count ? $rp($b->total_kredit) : '–' }}</td>
+                                <td data-label="Status">
                                     <span class="badge {{ $badgeClass }}">{{ $badgeText }}</span>
                                     @if($b->message)<div class="text-muted fs-8 mt-1">{{ $b->message }}</div>@endif
                                     @if($b->status === 'dibatalkan' && $b->cancelled_at)
                                         <div class="text-muted fs-8 mt-1">{{ $b->cancelled_at->format('d/m/Y H:i') }}@if($b->cancelledBy) oleh {{ $b->cancelledBy->name }}@endif</div>
                                     @endif
                                 </td>
-                                <td class="text-end pe-3 text-nowrap">
+                                <td class="text-end pe-3 text-nowrap" data-label="">
                                     @if($b->status === 'berhasil')
                                         <a href="{{ route('admin.keuangan.jurnal-umum.index', ['tab' => 'transaksi', 'batch_id' => $b->id]) }}" class="btn btn-sm btn-light">Lihat</a>
                                         <button type="button" class="btn btn-sm btn-light-danger btn-cancel-batch" data-url="{{ route('admin.keuangan.jurnal-umum.batches.destroy', $b) }}" data-kode="{{ $b->kode() }}" data-rows="{{ $b->rows_count }}">Batalkan</button>
@@ -233,7 +233,7 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="10" class="text-center text-muted py-10">Belum ada riwayat import.</td></tr>
+                            <tr><td colspan="10" data-label="" class="text-center text-muted py-10">Belum ada riwayat import.</td></tr>
                         @endforelse
                     </tbody>
                 </table>

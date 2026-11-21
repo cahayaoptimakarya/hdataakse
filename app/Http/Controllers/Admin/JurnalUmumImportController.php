@@ -7,6 +7,7 @@ use App\Exports\JurnalUmumTemplateExport;
 use App\Http\Controllers\Controller;
 use App\Imports\JurnalUmumImport;
 use App\Models\JurnalImportBatch;
+use App\Support\Audit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -192,6 +193,7 @@ class JurnalUmumImportController extends Controller
                 'tanggal_awal' => $import->tanggalAwal,
                 'tanggal_akhir' => $import->tanggalAkhir,
             ]);
+            Audit::log('import', 'Import jurnal', $batch->id, "Import {$batch->kode()} ({$fileName}): {$import->created} baris");
             DB::commit();
 
             return response()->json([
@@ -242,6 +244,7 @@ class JurnalUmumImportController extends Controller
                 'cancelled_at' => now(),
                 'cancelled_by' => $request->user()?->id,
             ]);
+            Audit::log('batal', 'Import jurnal', $batch->id, "Import {$batch->kode()} ({$batch->file_name}) dibatalkan, {$deleted} baris dihapus");
             DB::commit();
         } catch (\Throwable $e) {
             DB::rollBack();
@@ -274,6 +277,7 @@ class JurnalUmumImportController extends Controller
                 'cancelled_by' => $request->user()?->id,
                 'message' => 'Dihapus lewat Hapus Semua',
             ]);
+            Audit::log('hapus', 'Jurnal umum', null, "Semua jurnal umum dihapus ({$count} baris)");
             DB::commit();
             return response()->json([
                 'message' => 'Semua data jurnal umum berhasil dihapus.',

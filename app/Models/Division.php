@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Division extends Model
 {
-    use HasFactory;
+    use Auditable, HasFactory;
 
     protected $fillable = [
         'name',
@@ -21,5 +22,15 @@ class Division extends Model
     public function budgets()
     {
         return $this->hasMany(Budget::class, 'division_id');
+    }
+
+    public function auditType(): string
+    {
+        return 'Divisi';
+    }
+
+    public function auditName(): string
+    {
+        return $this->name;
     }
 }

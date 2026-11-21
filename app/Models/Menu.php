@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Menu extends Model
 {
-    use HasFactory;
+    use Auditable, HasFactory;
 
     protected $fillable = ['name','slug','route','icon','parent_id','sort_order','is_active'];
 
@@ -27,5 +28,14 @@ class Menu extends Model
             ->withPivot(['can_view','can_create','can_update','can_delete'])
             ->withTimestamps();
     }
-}
 
+    public function auditType(): string
+    {
+        return 'Menu';
+    }
+
+    public function auditName(): string
+    {
+        return $this->name;
+    }
+}

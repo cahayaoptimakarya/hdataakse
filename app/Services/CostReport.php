@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\DB;
 /**
  * Angka realisasi vs budget per akun × divisi, dipakai dashboard dan laporan.
  * Realisasi = jumlah kolom kredit jurnal (sama dengan laporan sebelumnya).
- * Akun id 1 / "kas" tidak dihitung sebagai biaya.
+ * Akun yang ditandai "dikecualikan" (misalnya kas) tidak dihitung sebagai biaya.
  */
 class CostReport
 {
@@ -29,8 +29,7 @@ class CostReport
             ->join('divisions as d', 'd.id', '=', 'sd.division_id')
             ->join('sub_akun_biaya as sab', 'sab.id', '=', 'ju.sub_akun_biaya_id')
             ->join('akun_biaya as ab', 'ab.id', '=', 'sab.akun_biaya_id')
-            ->where('ab.id', '!=', 1)
-            ->whereRaw('LOWER(ab.name) != ?', ['kas']);
+            ->where('ab.dikecualikan', false);
         $this->periode->applyToJurnal($q);
 
         return $q;
@@ -64,7 +63,7 @@ class CostReport
             ->when($divisionIds, fn ($x) => $x->whereIn('id', $divisionIds))
             ->orderBy('name')->get(['id', 'name']);
         $akunList = DB::table('akun_biaya')
-            ->where('id', '!=', 1)->whereRaw('LOWER(name) != ?', ['kas'])
+            ->where('dikecualikan', false)
             ->when($akunIds, fn ($x) => $x->whereIn('id', $akunIds))
             ->orderBy('name')->get(['id', 'name']);
         $subAkun = DB::table('sub_akun_biaya')->whereIn('akun_biaya_id', $akunList->pluck('id'))
@@ -145,7 +144,7 @@ class CostReport
     {
         $months = [];
         $divs = $divisionIds ?: DB::table('divisions')->pluck('id')->all();
-        $akun = $akunIds ?: DB::table('akun_biaya')->where('id', '!=', 1)->whereRaw('LOWER(name) != ?', ['kas'])->pluck('id')->all();
+        $akun = $akunIds ?: DB::table('akun_biaya')->where('dikecualikan', false)->pluck('id')->all();
         foreach (range(1, 12) as $m) {
             $p = new Periode($tahun, $m, $m);
             $q = (new self($p))->baseJurnal();
@@ -185,7 +184,7 @@ class CostReport
         }
 
         $divs = $divisionIds ?: DB::table('divisions')->pluck('id')->all();
-        $akunList = DB::table('akun_biaya')->where('id', '!=', 1)->whereRaw('LOWER(name) != ?', ['kas'])
+        $akunList = DB::table('akun_biaya')->where('dikecualikan', false)
             ->when($akunIds, fn ($x) => $x->whereIn('id', $akunIds))
             ->orderBy('name')->get(['id', 'name']);
         $b = [];

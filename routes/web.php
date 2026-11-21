@@ -58,6 +58,7 @@ Route::middleware(['auth', 'verified', 'menu.permission'])->prefix('admin')->as(
 
         // Permissions management
         Route::get('/permissions', [PermissionController::class, 'index'])->name('permissions.index');
+        Route::get('/log-aktivitas', [\App\Http\Controllers\Admin\AuditLogController::class, 'index'])->name('audit.index');
         Route::get('/permissions/{role}/edit', [PermissionController::class, 'edit'])->name('permissions.edit');
         Route::put('/permissions/{role}', [PermissionController::class, 'update'])->name('permissions.update');
     });
@@ -94,6 +95,9 @@ Route::middleware(['auth', 'verified', 'menu.permission'])->prefix('admin')->as(
         // Budget
         Route::get('/budget', [BudgetController::class, 'index'])->name('budget.index');
         Route::get('/budget/data', [BudgetController::class, 'data'])->name('budget.data');
+        Route::get('/budget/template', [BudgetController::class, 'template'])->name('budget.template');
+        Route::post('/budget/import', [BudgetController::class, 'import'])->name('budget.import');
+        Route::post('/budget/salin', [BudgetController::class, 'copy'])->name('budget.copy');
         Route::post('/budget', [BudgetController::class, 'store'])->name('budget.store');
         Route::put('/budget/{budget}', [BudgetController::class, 'update'])->name('budget.update');
         Route::delete('/budget/{budget}', [BudgetController::class, 'destroy'])->name('budget.destroy');

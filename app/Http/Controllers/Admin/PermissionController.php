@@ -59,6 +59,7 @@ class PermissionController extends Controller
                     }
                 }
             }
+            \App\Support\Audit::log('ubah', 'Hak akses', $role->id, 'Hak akses peran '.$role->name.' diubah');
             DB::commit();
         } catch (\Throwable $e) {
             DB::rollBack();

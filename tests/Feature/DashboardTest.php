@@ -28,7 +28,7 @@ class DashboardTest extends TestCase
         parent::setUp();
         $this->division = Division::create(['name' => 'Retail']);
         $this->toko = SubDivision::create(['division_id' => $this->division->id, 'name' => 'Toko A']);
-        $kas = AkunBiaya::create(['name' => 'Kas']);
+        $kas = AkunBiaya::create(['name' => 'Kas', 'dikecualikan' => true]);
         $this->akun = AkunBiaya::create(['name' => 'Operasional']);
         $this->kategori = SubAkunBiaya::create(['akun_biaya_id' => $this->akun->id, 'name' => 'Listrik']);
         $kasSub = SubAkunBiaya::create(['akun_biaya_id' => $kas->id, 'name' => 'Kas Kecil']);
