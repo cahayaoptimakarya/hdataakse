@@ -107,16 +107,33 @@ class BudgetPeriodeTest extends TestCase
             'sub_akun_biaya_id' => $this->kategori->id, 'debet' => 0, 'kredit' => 5_000,
         ]);
 
-        $res = $this->actingAs($this->user)->get(route('admin.keuangan.laporan.index', ['tahun' => 2026, 'bulan_dari' => 1, 'bulan_sampai' => 3]));
+        $q = ['tahun' => 2026, 'bulan_dari' => 1, 'bulan_sampai' => 3, 'satuan' => 'penuh'];
+        $res = $this->actingAs($this->user)->get(route('admin.keuangan.laporan.index', $q));
         $res->assertOk()
             ->assertSee('Januari – Maret 2026')
-            ->assertSee('100.000,00')
-            ->assertDontSee('200.000,00')
-            ->assertSee('data-budget="300000"', false)
+            ->assertSee('100.000')
+            ->assertDontSee('200.000')
+            ->assertSee('dari 300.000', false)
             ->assertSee('belum punya tanggal');
 
-        $all = $this->actingAs($this->user)->get(route('admin.keuangan.laporan.index', ['tahun' => 'semua']));
-        $all->assertOk()->assertSee('1.304.000,00')->assertDontSee('belum punya tanggal');
+        $all = $this->actingAs($this->user)->get(route('admin.keuangan.laporan.index', ['tahun' => 'semua', 'satuan' => 'penuh']));
+        $all->assertOk()->assertSee('1.304.000')->assertDontSee('belum punya tanggal');
+
+        // Tab lain ikut periode yang sama.
+        foreach (['toko', 'tren', 'lewat'] as $tab) {
+            $this->actingAs($this->user)->get(route('admin.keuangan.laporan.index', $q + ['tab' => $tab]))->assertOk();
+        }
+        $this->actingAs($this->user)->get(route('admin.keuangan.laporan.index', $q + ['tab' => 'tren']))->assertSee('200.000');
+
+        // Panel detail: realisasi, budget, dan transaksi untuk periode itu saja.
+        $detail = $this->actingAs($this->user)->getJson(route('admin.keuangan.laporan.detail', $q + [
+            'akun_id' => $this->akun->id, 'division_id' => $this->division->id,
+        ]));
+        $detail->assertOk()
+            ->assertJsonPath('total', 100000)
+            ->assertJsonPath('budget', 300000)
+            ->assertJsonPath('jumlah', 1)
+            ->assertJsonPath('per_toko.0.name', 'Toko A');
     }
 
     public function test_sub_divisi_budget_saved_per_year(): void

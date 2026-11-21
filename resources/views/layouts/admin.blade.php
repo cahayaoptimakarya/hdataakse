@@ -41,7 +41,7 @@
             border: 1px solid #e4e6ef;
         }
     </style>
-    <link href="{{ asset('css/ui.css') }}?v=2" rel="stylesheet" type="text/css" />
+    <link href="{{ asset('css/ui.css') }}?v={{ filemtime(public_path('css/ui.css')) }}" rel="stylesheet" type="text/css" />
     @stack('styles')
     @yield('styles')
     <meta name="description" content="Kontrol biaya: realisasi vs budget per divisi dan toko" />

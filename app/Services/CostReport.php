@@ -162,6 +162,46 @@ class CostReport
         return $months;
     }
 
+    /**
+     * Realisasi dan budget per akun per bulan dalam satu tahun.
+     *
+     * @return array{akun: Collection, r: array, b: array}  r/b[akun_id][1..12]
+     */
+    public static function monthlyByAkun(int $tahun, array $divisionIds = [], array $akunIds = []): array
+    {
+        $q = (new self(new Periode($tahun)))->baseJurnal()
+            ->select('ab.id as akun_id', 'ju.tanggal', DB::raw('SUM(ju.kredit) as total'))
+            ->groupBy('ab.id', 'ju.tanggal');
+        if ($divisionIds) {
+            $q->whereIn('d.id', $divisionIds);
+        }
+        if ($akunIds) {
+            $q->whereIn('ab.id', $akunIds);
+        }
+        $r = [];
+        foreach ($q->get() as $row) {
+            $m = (int) substr((string) $row->tanggal, 5, 2);
+            $r[$row->akun_id][$m] = ($r[$row->akun_id][$m] ?? 0) + (float) $row->total;
+        }
+
+        $divs = $divisionIds ?: DB::table('divisions')->pluck('id')->all();
+        $akunList = DB::table('akun_biaya')->where('id', '!=', 1)->whereRaw('LOWER(name) != ?', ['kas'])
+            ->when($akunIds, fn ($x) => $x->whereIn('id', $akunIds))
+            ->orderBy('name')->get(['id', 'name']);
+        $b = [];
+        foreach (range(1, 12) as $m) {
+            foreach ((new Periode($tahun, $m, $m))->budgetMap('budgets', 'division_id', $divs, $akunList->pluck('id')->all()) as $akunId => $perDiv) {
+                $b[$akunId][$m] = array_sum($perDiv);
+            }
+        }
+
+        return [
+            'akun' => $akunList->filter(fn ($a) => isset($r[$a->id]) || isset($b[$a->id]))->values(),
+            'r' => $r,
+            'b' => $b,
+        ];
+    }
+
     public static function pct(float $realisasi, float $budget): ?float
     {
         return $budget > 0 ? $realisasi / $budget * 100 : null;

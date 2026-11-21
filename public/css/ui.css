@@ -168,8 +168,9 @@ body.ui h1, body.ui h2, body.ui h3, body.ui h4, body.ui .fw-bolder { font-family
 .ui-mx .cell .b { font-size: 11px; color: var(--ui-ink3); margin-top: 2px; font-weight: 500; }
 .ui-mx .cell .b span { font-weight: 650; }
 .ui-mx tr.gt td { background: #0f172a !important; color: #fff; font-weight: 700; }
+.ui-mx tr.gt td .r { color: #fff; }
 .ui-mx tr.gt td .b { color: #94a3b8; }
-.ui-mx .lnk { color: var(--ui-ink2); border-bottom: 1px dashed #cbd5e1; cursor: pointer; background: none; padding: 0; }
+.ui-mx .lnk { color: var(--ui-ink2); border: 0; border-bottom: 1px dashed #cbd5e1; font: inherit; cursor: pointer; background: none; padding: 0; }
 .ui-mx .lnk:hover { color: var(--ui-brand); border-color: var(--ui-brand); }
 .ui-mx td.clk { cursor: pointer; }
 .ui-mx td.clk:hover { background: #eef4ff; }
@@ -193,3 +194,7 @@ body.ui h1, body.ui h2, body.ui h3, body.ui h4, body.ui .fw-bolder { font-family
 .ui-chart .col .bud { position: absolute; left: 8%; right: 8%; border-top: 2px dashed #f59e0b; }
 .ui-chart-x { display: flex; gap: 10px; padding: 6px 4px 0; }
 .ui-chart-x div { flex: 1; text-align: center; font-size: 11px; color: var(--ui-ink2); }
+
+/* Laporan per toko: tombol ubah budget muncul saat sel disorot */
+.toko-cell .budget-edit { position: absolute; top: 4px; left: 4px; width: 24px !important; height: 24px !important; padding: 0 !important; opacity: 0; transition: opacity .15s; }
+.toko-cell:hover .budget-edit { opacity: 1; }
