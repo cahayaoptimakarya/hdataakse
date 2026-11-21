@@ -13,6 +13,7 @@ use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Events\AfterImport;
 use Maatwebsite\Excel\Imports\HeadingRowFormatter;
 use Maatwebsite\Excel\Row;
+use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 
 class JurnalUmumImport implements OnEachRow, WithHeadingRow, SkipsEmptyRows, WithEvents
 {
@@ -42,13 +43,23 @@ class JurnalUmumImport implements OnEachRow, WithHeadingRow, SkipsEmptyRows, Wit
 
         $this->validateHeaders($data);
 
+        $tanggalRaw = $data['tanggal'] ?? null;
         $keterangan = trim((string) ($data['keterangan'] ?? ''));
         $toko = trim((string) ($data['toko'] ?? ''));
         $kategori = trim((string) ($data['kategori'] ?? ''));
         $debetRaw = $data['debet'] ?? null;
         $kreditRaw = $data['kredit'] ?? null;
 
-        if ($this->isRowEmpty($keterangan, $toko, $kategori, $debetRaw, $kreditRaw)) {
+        if ($this->isRowEmpty($tanggalRaw, $keterangan, $toko, $kategori, $debetRaw, $kreditRaw)) {
+            return;
+        }
+
+        $tanggal = $this->parseDate($tanggalRaw);
+        if ($tanggal === null) {
+            $message = $this->isBlank($tanggalRaw) ? 'tanggal wajib diisi' : 'tanggal tidak valid';
+            $this->errors[] = "Baris {$rowIndex}: {$message}";
+            $this->addErrorRow($row, $data, $message, $rowIndex);
+            $this->skipped++;
             return;
         }
 
@@ -67,8 +78,8 @@ class JurnalUmumImport implements OnEachRow, WithHeadingRow, SkipsEmptyRows, Wit
             return;
         }
 
-        $debet = $this->parseAmount($debetRaw);
-        $kredit = $this->parseAmount($kreditRaw);
+        $debet = self::parseAmount($debetRaw);
+        $kredit = self::parseAmount($kreditRaw);
 
         if ($debet === null || $kredit === null) {
             $this->errors[] = "Baris {$rowIndex}: debet/kredit tidak valid";
@@ -85,7 +96,7 @@ class JurnalUmumImport implements OnEachRow, WithHeadingRow, SkipsEmptyRows, Wit
         }
 
         $this->pendingRows[] = [
-            'tanggal' => null,
+            'tanggal' => $tanggal,
             'keterangan' => $keterangan !== '' ? $keterangan : null,
             'sub_divisi_id' => $subDivisiId,
             'sub_akun_biaya_id' => $subAkunId,
@@ -100,26 +111,82 @@ class JurnalUmumImport implements OnEachRow, WithHeadingRow, SkipsEmptyRows, Wit
             return;
         }
 
-        $expected = ['keterangan', 'toko', 'kategori', 'debet', 'kredit'];
+        $expected = ['tanggal', 'keterangan', 'toko', 'kategori', 'debet', 'kredit'];
         $missing = array_diff($expected, array_keys($row));
         if ($missing) {
-            throw new \RuntimeException('Header harus: keterangan, toko, kategori, debet, kredit');
+            throw new \RuntimeException('Header harus: tanggal, keterangan, toko, kategori, debet, kredit');
         }
 
         $this->headerChecked = true;
     }
 
-    protected function isRowEmpty(string $keterangan, string $toko, string $kategori, $debet, $kredit): bool
+    protected function isRowEmpty($tanggal, string $keterangan, string $toko, string $kategori, $debet, $kredit): bool
     {
-        $debetEmpty = $debet === null || $debet === '';
-        $kreditEmpty = $kredit === null || $kredit === '';
+        return $this->isBlank($tanggal)
+            && $keterangan === '' && $toko === '' && $kategori === ''
+            && $this->isBlank($debet) && $this->isBlank($kredit);
+    }
 
-        return $keterangan === '' && $toko === '' && $kategori === '' && $debetEmpty && $kreditEmpty;
+    protected function isBlank($value): bool
+    {
+        return $value === null || (is_string($value) && trim($value) === '');
+    }
+
+    /**
+     * Ubah nilai tanggal dari Excel menjadi format Y-m-d.
+     * Menerima sel tanggal Excel (serial number) dan teks
+     * dd/mm/yyyy, dd-mm-yyyy, dd.mm.yyyy, atau yyyy-mm-dd.
+     */
+    public static function parseDate($value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if ($value instanceof \DateTimeInterface) {
+            return $value->format('Y-m-d');
+        }
+
+        if (is_int($value) || is_float($value) || (is_string($value) && preg_match('/^\d+(\.\d+)?$/', trim($value)))) {
+            $serial = (float) $value;
+            // Batas wajar serial tanggal Excel (1900-01-01 s/d 9999-12-31).
+            if ($serial < 1 || $serial > 2958465) {
+                return null;
+            }
+            try {
+                return ExcelDate::excelToDateTimeObject($serial)->format('Y-m-d');
+            } catch (\Throwable) {
+                return null;
+            }
+        }
+
+        $value = trim((string) $value);
+        if ($value === '') {
+            return null;
+        }
+
+        // Buang bagian jam jika ada, mis. "2026-11-21 00:00:00".
+        $value = preg_split('/\s+/', $value)[0];
+
+        if (preg_match('/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})$/', $value, $m)) {
+            [$year, $month, $day] = [(int) $m[1], (int) $m[2], (int) $m[3]];
+        } elseif (preg_match('/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})$/', $value, $m)) {
+            [$day, $month, $year] = [(int) $m[1], (int) $m[2], (int) $m[3]];
+        } else {
+            return null;
+        }
+
+        if (!checkdate($month, $day, $year)) {
+            return null;
+        }
+
+        return sprintf('%04d-%02d-%02d', $year, $month, $day);
     }
 
     protected function addErrorRow(Row $row, array $data, string $message, int $rowIndex): void
     {
         $this->errorRows[] = [
+            $this->getDisplayValue($row, $data, 'tanggal'),
             $this->getDisplayValue($row, $data, 'keterangan'),
             $this->getDisplayValue($row, $data, 'toko'),
             $this->getDisplayValue($row, $data, 'kategori'),
@@ -137,17 +204,24 @@ class JurnalUmumImport implements OnEachRow, WithHeadingRow, SkipsEmptyRows, Wit
     }
 
 
-    protected function parseAmount($value): ?float
+    public static function parseAmount($value): ?float
     {
         if ($value === null || $value === '') return 0.0;
-        if (is_numeric($value)) return (float) $value;
+        if (is_int($value) || is_float($value)) return (float) $value;
 
         $value = str_replace([' ', "\xc2\xa0"], '', (string) $value);
+        if ($value === '') return 0.0;
 
         $hasComma = str_contains($value, ',');
         $hasDot = str_contains($value, '.');
 
-        if ($hasComma && $hasDot) {
+        if ($hasDot && !$hasComma && preg_match('/^-?\d{1,3}(\.\d{3})+$/', $value)) {
+            // Format Indonesia dengan pemisah ribuan titik, mis. 1.500.000 atau 1.500.
+            $value = str_replace('.', '', $value);
+        } elseif ($hasComma && !$hasDot && preg_match('/^-?\d{1,3}(,\d{3}){2,}$/', $value)) {
+            // Pemisah ribuan koma lebih dari satu, mis. 1,500,000.
+            $value = str_replace(',', '', $value);
+        } elseif ($hasComma && $hasDot) {
             $lastComma = strrpos($value, ',');
             $lastDot = strrpos($value, '.');
             if ($lastComma > $lastDot) {
