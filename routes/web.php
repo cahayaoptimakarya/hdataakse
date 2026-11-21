@@ -103,6 +103,7 @@ Route::middleware(['auth', 'verified', 'menu.permission'])->prefix('admin')->as(
         Route::get('/jurnal-umum/template', [JurnalUmumImportController::class, 'template'])->name('jurnal-umum.template');
         Route::post('/jurnal-umum', [JurnalUmumImportController::class, 'store'])->name('jurnal-umum.store');
         Route::delete('/jurnal-umum', [JurnalUmumImportController::class, 'destroyAll'])->name('jurnal-umum.destroy');
+        Route::delete('/jurnal-umum/batch/{batch}', [JurnalUmumImportController::class, 'cancelBatch'])->name('jurnal-umum.batches.destroy');
 
         // Laporan
         Route::get('/laporan', [LaporanJurnalUmumController::class, 'index'])->name('laporan.index');

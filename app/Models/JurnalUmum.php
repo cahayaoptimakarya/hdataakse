@@ -18,7 +18,14 @@ class JurnalUmum extends Model
         'sub_akun_biaya_id',
         'debet',
         'kredit',
+        'import_batch_id',
+        'row_hash',
     ];
+
+    public function importBatch()
+    {
+        return $this->belongsTo(JurnalImportBatch::class, 'import_batch_id');
+    }
 
     public function subDivisi()
     {

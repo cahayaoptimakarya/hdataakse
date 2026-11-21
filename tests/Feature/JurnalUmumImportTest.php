@@ -12,19 +12,16 @@ use Maatwebsite\Excel\Facades\Excel;
 use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class JurnalUmumImportTest extends TestCase
 {
+    use RefreshDatabase;
+
     protected function setUp(): void
     {
         parent::setUp();
-        // Beberapa migrasi lama khusus MySQL, jadi hanya migrasi yang dibutuhkan yang dijalankan.
-        $this->artisan('migrate', ['--path' => [
-            'database/migrations/2026_02_13_000000_create_divisions_and_sub_divisions_tables.php',
-            'database/migrations/2026_02_13_000001_create_akun_biaya_and_sub_akun_biaya_tables.php',
-            'database/migrations/2026_02_13_000003_create_jurnal_umum_table.php',
-        ]]);
         $division = Division::create(['name' => 'Divisi A']);
         SubDivision::create(['division_id' => $division->id, 'name' => 'Toko A']);
         $akun = AkunBiaya::create(['name' => 'Operasional']);
