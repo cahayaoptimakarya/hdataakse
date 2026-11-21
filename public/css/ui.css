@@ -198,3 +198,7 @@ body.ui h1, body.ui h2, body.ui h3, body.ui h4, body.ui .fw-bolder { font-family
 /* Laporan per toko: tombol ubah budget muncul saat sel disorot */
 .toko-cell .budget-edit { position: absolute; top: 4px; left: 4px; width: 24px !important; height: 24px !important; padding: 0 !important; opacity: 0; transition: opacity .15s; }
 .toko-cell:hover .budget-edit { opacity: 1; }
+/* Pager Laravel: halaman sudah menampilkan ringkasan sendiri, sembunyikan teks "Menampilkan x sampai y". */
+.ui .ui-pager nav .flex-sm-fill > div:first-child { display: none; }
+.ui .ui-pager nav .flex-sm-fill { justify-content: flex-end !important; }
+.ui .ui-pager .pagination { margin-bottom: 0; }

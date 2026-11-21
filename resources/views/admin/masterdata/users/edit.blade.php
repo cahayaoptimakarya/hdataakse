@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
-@section('title', 'Edit User')
-@section('page_title', 'Edit User')
+@section('title', 'Ubah pengguna')
+@section('page_title', 'Ubah pengguna')
 
 @section('page_breadcrumbs')
     <span class="text-muted">Home</span>
@@ -10,7 +10,7 @@
     <span class="mx-2">-</span>
     <span class="text-muted">Users</span>
     <span class="mx-2">-</span>
-    <span class="text-dark">Edit</span>
+    <span class="text-dark">Ubah</span>
 @endsection
 
 @section('content')
@@ -37,7 +37,7 @@
                         @error('password')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
                     <div class="mb-10">
-                        <label class="form-label">Roles</label>
+                        <label class="form-label">Peran</label>
                         <select name="roles[]" class="form-select @error('roles') is-invalid @enderror form-select-solid" multiple data-control="select2" data-placeholder="Pilih Roles">
                             @foreach($roles as $r)
                                 <option value="{{ $r->id }}" @selected(collect(old('roles', $user->roles->pluck('id')->all()))->contains($r->id))>{{ $r->name }}</option>

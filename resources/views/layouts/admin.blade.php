@@ -53,7 +53,8 @@
     @php
         $authUser = auth()->user();
         $initials = collect(explode(' ', trim($authUser?->name ?? 'U')))->filter()->take(2)->map(fn ($w) => mb_strtoupper(mb_substr($w, 0, 1)))->implode('');
-        $pageTitle = trim($__env->yieldContent('page_title')) ?: (trim($__env->yieldContent('title')) ?: 'Dashboard');
+        // Isi @section berbentuk string sudah di-escape Blade; decode dulu agar tidak dobel saat dicetak.
+        $pageTitle = html_entity_decode(trim($__env->yieldContent('page_title')) ?: (trim($__env->yieldContent('title')) ?: 'Dashboard'));
     @endphp
     <div class="ui-app">
         @include('layouts.partials.sidebar')
@@ -103,6 +104,15 @@
     <script src="{{ asset('metronic/js/scripts.bundle.js') }}"></script>
     <script src="{{ asset('metronic/plugins/custom/datatables/datatables.bundle.js') }}"></script>
     <script>
+        // Teks tabel DataTables dalam Bahasa Indonesia untuk semua halaman.
+        if (window.jQuery && jQuery.fn.dataTable) {
+            jQuery.extend(true, jQuery.fn.dataTable.defaults, { language: {
+                search: 'Cari:', lengthMenu: 'Tampilkan _MENU_', zeroRecords: 'Tidak ada data yang cocok',
+                emptyTable: 'Belum ada data', info: 'Menampilkan _START_–_END_ dari _TOTAL_ data',
+                infoEmpty: 'Tidak ada data', infoFiltered: '(disaring dari _MAX_ data)', processing: 'Memuat…',
+                loadingRecords: 'Memuat…', paginate: { first: 'Pertama', last: 'Terakhir', next: '›', previous: '‹' },
+            } });
+        }
         // Simple SweetAlert2 wrapper used by masterdata pages.
         window.AppSwal = window.AppSwal || (function () {
             const defaults = {

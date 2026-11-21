@@ -1,14 +1,14 @@
 @extends('layouts.admin')
 
-@section('title', 'Atur Permission - ' . $role->name)
-@section('page_title', 'Atur Permission: ' . $role->name)
+@section('title', 'Atur hak akses - ' . $role->name)
+@section('page_title', 'Atur hak akses: ' . $role->name)
 
 @section('page_breadcrumbs')
     <span class="text-muted">Home</span>
     <span class="mx-2">-</span>
     <span class="text-muted">Masterdata</span>
     <span class="mx-2">-</span>
-    <span class="text-muted">Permissions</span>
+    <span class="text-muted">Hak akses</span>
     <span class="mx-2">-</span>
     <span class="text-dark">{{ $role->name }}</span>
 @endsection
