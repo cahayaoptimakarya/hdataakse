@@ -32,12 +32,7 @@
 @section('page_title', 'Laporan realisasi vs budget')
 
 @section('page_actions')
-    @if($tab === 'bandingkan')
-    @elseif($tab === 'toko')
-        <a href="{{ route('admin.keuangan.laporan.export-divisi', request()->query()) }}" class="btn btn-light btn-sm"><i class="fa-solid fa-file-excel me-1"></i> Export Excel</a>
-    @else
-        <a href="{{ route('admin.keuangan.laporan.export', request()->query()) }}" class="btn btn-light btn-sm"><i class="fa-solid fa-file-excel me-1"></i> Export Excel</a>
-    @endif
+    <a href="{{ route('admin.keuangan.laporan.export', array_merge(request()->query(), ['tab' => $tab])) }}" class="btn btn-light btn-sm"><i class="fa-solid fa-file-excel me-1 text-success"></i> Export Excel</a>
 @endsection
 
 @section('content')

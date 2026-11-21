@@ -112,4 +112,35 @@ class BandingkanDanJurnalCrudTest extends TestCase
 
         $this->get(route('admin.keuangan.jurnal-umum.index'))->assertOk()->assertSee('Tambah transaksi');
     }
+    public function test_excel_export_for_every_tab(): void
+    {
+        $expected = [
+            'ringkasan' => ['Ringkasan', 'Akun × Divisi', 'Data', 'Panduan'],
+            'toko' => ['Per Toko', 'Data', 'Panduan'],
+            'tren' => ['Tren 2026', 'Data', 'Panduan'],
+            'lewat' => ['Status Pos', 'Data', 'Panduan'],
+            'bandingkan' => ['Ringkasan', 'Per Akun & Kategori', 'Per Divisi', 'Per Toko', 'Data', 'Panduan'],
+        ];
+        foreach ($expected as $tab => $sheets) {
+            $res = $this->actingAs($this->user)->get(route('admin.keuangan.laporan.export', ['tab' => $tab, 'tahun' => 2026, 'bulan_dari' => 10, 'bulan_sampai' => 10]));
+            $res->assertOk();
+            $path = tempnam(sys_get_temp_dir(), 'xl').'.xlsx';
+            file_put_contents($path, $res->streamedContent());
+            $book = \PhpOffice\PhpSpreadsheet\IOFactory::load($path);
+            $this->assertSame($sheets, $book->getSheetNames(), $tab);
+            $data = $book->getSheetByName('Data');
+            $this->assertNotNull($data->getTableByName($tab === 'bandingkan' ? 'DataRealisasi' : 'DataJurnal'));
+        }
+
+        // Angka utama Oktober 2026 ikut masuk.
+        $res = $this->actingAs($this->user)->get(route('admin.keuangan.laporan.export', ['tab' => 'ringkasan', 'tahun' => 2026, 'bulan_dari' => 10, 'bulan_sampai' => 10]));
+        $path = tempnam(sys_get_temp_dir(), 'xl').'.xlsx';
+        file_put_contents($path, $res->streamedContent());
+        $ws = \PhpOffice\PhpSpreadsheet\IOFactory::load($path)->getSheetByName('Ringkasan');
+        $this->assertSame('Retail', $ws->getCell('A9')->getValue());
+        $this->assertEquals(120000, $ws->getCell('C9')->getValue());
+        $this->assertEqualsWithDelta(1.2, $ws->getCell('E9')->getCalculatedValue(), 0.0001);
+        $this->assertSame('Lewat budget', $ws->getCell('H9')->getCalculatedValue());
+        $this->assertTrue(AuditLog::where('action', 'export')->exists());
+    }
 }
