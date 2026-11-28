@@ -108,12 +108,23 @@ class DivisionController extends Controller
 
     public function destroy(Division $division)
     {
+        $tokoIds = DB::table('sub_divisions')->where('division_id', $division->id)->pluck('id');
+        $jumlahJurnal = DB::table('jurnal_umum')->whereIn('sub_divisi_id', $tokoIds)->count();
+        if ($jumlahJurnal > 0) {
+            return response()->json([
+                'message' => "Divisi {$division->name} tidak bisa dihapus karena masih dipakai oleh "
+                    .number_format($jumlahJurnal, 0, ',', '.').' transaksi jurnal. Pindahkan atau hapus transaksinya dulu.',
+            ], 422);
+        }
+
         DB::beginTransaction();
         try {
+            $budget = DB::table('budgets')->where('division_id', $division->id)->count()
+                + DB::table('sub_divisi_budgets')->whereIn('sub_divisi_id', $tokoIds)->count();
             $division->delete();
             DB::commit();
 
-            return response()->json(['message' => 'Divisi berhasil dihapus']);
+            return response()->json(['message' => 'Divisi berhasil dihapus'.($budget ? " ({$budget} baris budget ikut terhapus)" : '')]);
         } catch (\Throwable $e) {
             DB::rollBack();
             return response()->json([
@@ -228,12 +239,21 @@ class DivisionController extends Controller
 
     public function destroySub(SubDivision $subDivision)
     {
+        $jumlahJurnal = DB::table('jurnal_umum')->where('sub_divisi_id', $subDivision->id)->count();
+        if ($jumlahJurnal > 0) {
+            return response()->json([
+                'message' => "Toko {$subDivision->name} tidak bisa dihapus karena masih dipakai oleh "
+                    .number_format($jumlahJurnal, 0, ',', '.').' transaksi jurnal. Pindahkan atau hapus transaksinya dulu.',
+            ], 422);
+        }
+
         DB::beginTransaction();
         try {
+            $budget = DB::table('sub_divisi_budgets')->where('sub_divisi_id', $subDivision->id)->count();
             $subDivision->delete();
             DB::commit();
 
-            return response()->json(['message' => 'Sub divisi berhasil dihapus']);
+            return response()->json(['message' => 'Toko berhasil dihapus'.($budget ? " ({$budget} baris budget ikut terhapus)" : '')]);
         } catch (\Throwable $e) {
             DB::rollBack();
             return response()->json([

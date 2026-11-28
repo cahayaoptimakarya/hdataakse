@@ -113,12 +113,23 @@ class AkunBiayaController extends Controller
 
     public function destroy(AkunBiaya $akunBiaya)
     {
+        $kategoriIds = DB::table('sub_akun_biaya')->where('akun_biaya_id', $akunBiaya->id)->pluck('id');
+        $jumlahJurnal = DB::table('jurnal_umum')->whereIn('sub_akun_biaya_id', $kategoriIds)->count();
+        if ($jumlahJurnal > 0) {
+            return response()->json([
+                'message' => "Akun {$akunBiaya->name} tidak bisa dihapus karena masih dipakai oleh "
+                    .number_format($jumlahJurnal, 0, ',', '.').' transaksi jurnal. Pindahkan atau hapus transaksinya dulu.',
+            ], 422);
+        }
+
         DB::beginTransaction();
         try {
+            $budget = DB::table('budgets')->where('akun_biaya_id', $akunBiaya->id)->count()
+                + DB::table('sub_divisi_budgets')->where('akun_biaya_id', $akunBiaya->id)->count();
             $akunBiaya->delete();
             DB::commit();
 
-            return response()->json(['message' => 'Akun pembayaran berhasil dihapus']);
+            return response()->json(['message' => 'Akun pembayaran berhasil dihapus'.($budget ? " ({$budget} baris budget ikut terhapus)" : '')]);
         } catch (\Throwable $e) {
             DB::rollBack();
             return response()->json([
@@ -233,6 +244,14 @@ class AkunBiayaController extends Controller
 
     public function destroySub(SubAkunBiaya $subAkunBiaya)
     {
+        $jumlahJurnal = DB::table('jurnal_umum')->where('sub_akun_biaya_id', $subAkunBiaya->id)->count();
+        if ($jumlahJurnal > 0) {
+            return response()->json([
+                'message' => "Kategori {$subAkunBiaya->name} tidak bisa dihapus karena masih dipakai oleh "
+                    .number_format($jumlahJurnal, 0, ',', '.').' transaksi jurnal. Pindahkan atau hapus transaksinya dulu.',
+            ], 422);
+        }
+
         DB::beginTransaction();
         try {
             $subAkunBiaya->delete();
