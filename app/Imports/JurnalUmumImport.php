@@ -261,6 +261,10 @@ class JurnalUmumImport implements OnEachRow, WithHeadingRow, SkipsEmptyRows, Wit
 
         $value = str_replace([' ', "\xc2\xa0"], '', (string) $value);
         if ($value === '') return 0.0;
+        // Buang awalan "Rp" dan akhiran ",-" / ".-" yang lazim di penulisan Rupiah.
+        $value = preg_replace('/^(-?)rp\.?/i', '$1', $value);
+        $value = preg_replace('/[,.]-$/', '', $value);
+        if ($value === '') return null;
 
         $hasComma = str_contains($value, ',');
         $hasDot = str_contains($value, '.');
@@ -268,8 +272,9 @@ class JurnalUmumImport implements OnEachRow, WithHeadingRow, SkipsEmptyRows, Wit
         if ($hasDot && !$hasComma && preg_match('/^-?\d{1,3}(\.\d{3})+$/', $value)) {
             // Format Indonesia dengan pemisah ribuan titik, mis. 1.500.000 atau 1.500.
             $value = str_replace('.', '', $value);
-        } elseif ($hasComma && !$hasDot && preg_match('/^-?\d{1,3}(,\d{3}){2,}$/', $value)) {
-            // Pemisah ribuan koma lebih dari satu, mis. 1,500,000.
+        } elseif ($hasComma && !$hasDot && preg_match('/^-?\d{1,3}(,\d{3})+$/', $value)) {
+            // Pemisah ribuan koma, mis. 15,000 atau 1,500,000. Nominal Rupiah tidak pernah
+            // punya tiga angka desimal, jadi koma + tepat 3 angka dibaca sebagai ribuan.
             $value = str_replace(',', '', $value);
         } elseif ($hasComma && $hasDot) {
             $lastComma = strrpos($value, ',');
